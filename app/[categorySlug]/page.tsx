@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import CategoryClient from '@/components/CategoryClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+export const dynamic = 'force-dynamic';
 
 interface CategoryPageProps {
   params: Promise<{ categorySlug: string }>;

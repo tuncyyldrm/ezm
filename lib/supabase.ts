@@ -6,8 +6,8 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // ⚡ JET ÇÖZÜM: Build sırasında kütüphanenin patlamaması için geçerli formatta bir placeholder (yedek) URL tanımlıyoruz.
 // Next.js derleme aşamasını sorunsuz atlatacak, canlıda (runtime) ise Vercel'deki gerçek adresin devreye girecek usta.
-const finalUrl = supabaseUrl || 'https://placeholder-project-id.supabase.co';
-const finalKey = supabaseAnonKey || 'placeholder-anon-key-for-build-stage';
+const finalUrl = supabaseUrl || 'https://erntysmhwfxkrtegirds.supabase.co';
+const finalKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
 
 export const supabase = createClient(finalUrl, finalKey, {
   auth: {
