@@ -9,17 +9,27 @@ interface ProductImageProps {
 }
 
 export default function ProductImage({ sku, title, storageUrl }: ProductImageProps) {
+  // İlk state karmaşasını önlemek için ham linki veriyoruz
   const [imgSrc, setImgSrc] = useState(`${storageUrl}/${sku}.png`);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    setImgSrc(`${storageUrl}/${sku}.png`);
     setRetryCount(0);
+    // ⚡ Sayfa yenilendiğinde tarayıcının eski hatalı hafızasını ezmek için ?t= parametresi ekledik
+    setImgSrc(`${storageUrl}/${sku}.png?t=${Date.now()}`);
   }, [sku, storageUrl]);
 
   const handleError = () => {
-    if (retryCount === 0) setImgSrc(`${storageUrl}/${sku}.jpg`);
-    else if (retryCount === 1) setImgSrc('/no-image.webp');
+    // Eğer zaten no-image aşamasına geldiysek sonsuz döngüyü önlemek için durdur
+    if (imgSrc === '/no-image.webp') return;
+
+    if (retryCount === 0) {
+      // .png bulamadıysa .jpg dene (yine taze istek parametresi ile)
+      setImgSrc(`${storageUrl}/${sku}.jpg?v=1`);
+    } else if (retryCount === 1) {
+      // .jpg de bulamadıysa varsayılan resme düş
+      setImgSrc('/no-image.webp');
+    }
     setRetryCount(c => c + 1);
   };
 

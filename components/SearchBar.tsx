@@ -5,6 +5,17 @@ import { useRouter } from 'next/navigation';
 import { supabase, Product } from '@/lib/supabase';
 import ProductImage from '@/components/ProductImage';
 
+function createTurkishRegexPattern(text: string): string {
+  return text
+    .replace(/[-+()]/g, '')
+    .replace(/[iİıI]/g, '[iİıI]')
+    .replace(/[şŞsS]/g, '[şŞsS]')
+    .replace(/[çÇcC]/g, '[çÇcC]')
+    .replace(/[ğĞgG]/g, '[ğĞgG]')
+    .replace(/[üÜuU]/g, '[üÜuU]')
+    .replace(/[öÖoO]/g, '[öÖoO]');
+}
+
 export default function SearchBar() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
@@ -32,6 +43,9 @@ export default function SearchBar() {
 
   // Debounce ile sunucu tarafında arama
   useEffect(() => {
+    // 🛡️ Asenkron kontrol kilidi: Eski isteklerin yeni sonuçları ezmesini engeller
+    let active = true;
+
     const delayDebounceFn = setTimeout(async () => {
       const trimmed = query.trim();
       
@@ -49,38 +63,44 @@ export default function SearchBar() {
         const keywords = trimmed.split(/\s+/);
         const cleanQuery = trimmed.replace(/[- ]/g, '');
 
-        // Paralel sorgular: Ürün başlık/SKU + OEM kodları + Marka adı
+        // Paralel sorgular
         const [titleRes, oemRes, brandRes] = await Promise.all([
-          // 1. Başlık ve SKU'da her kelimeyi ara
+          // 1. Başlık ve SKU'da Regex arama
           (async () => {
-            let query = supabase
+            let queryBuilder = supabase
               .from('products')
-              .select('id, sku, title, pin_count, product_codes(code_value)')
+              .select('id, sku, title, pin_count')
               .eq('is_active', true);
             
             keywords.forEach(word => {
-              query = query.or(`title.ilike.%${word}%,sku.ilike.%${word}%`);
+              const pattern = createTurkishRegexPattern(word);
+              queryBuilder = queryBuilder.or(`title.imatch..*${pattern}.*,sku.imatch..*${pattern}.*`);
             });
             
-            return query.limit(8);
+            return queryBuilder.limit(8);
           })(),
           
-          // 2. OEM kodlarında ara (boşluksuz)
+          // 2. OEM kodlarında arama
           supabase
             .from('product_codes')
             .select('products!inner(id, sku, title, pin_count)')
             .ilike('code_value', `%${cleanQuery}%`)
             .limit(5),
           
-          // 3. Marka adında ara
-          supabase
-            .from('product_vehicles')
-            .select('products!inner(id, sku, title, pin_count), brands!inner(name)')
-            .ilike('brands.name', `%${trimmed}%`)
-            .limit(3)
+          // 3. Marka adında Regex arama
+          (async () => {
+            const brandPattern = createTurkishRegexPattern(trimmed);
+            return supabase
+              .from('product_vehicles')
+              .select('products!inner(id, sku, title, pin_count)')
+              .or(`brands.name.imatch..*${brandPattern}.*`)
+              .limit(3);
+          })()
         ]);
 
-        // Sonuçları birleştir
+        // Eğer kullanıcı yeni harfler yazdıysa ve bu eski istek geç geldiyse state'i GÜNCELLEME!
+        if (!active) return;
+
         const titleData = (titleRes.data || []) as Product[];
         
         const oemData = (oemRes.data || [])
@@ -91,7 +111,7 @@ export default function SearchBar() {
           .map((item: any) => item.products)
           .filter(Boolean) as Product[];
 
-        // Birleştir ve ID'ye göre tekilleştir
+        // Birleştir ve güvenli tekilleştir
         const combined = [...titleData, ...oemData, ...brandData];
         const unique = Array.from(
           new Map(combined.map(item => [item.id, item])).values()
@@ -101,27 +121,30 @@ export default function SearchBar() {
         setIsOpen(unique.length > 0);
       } catch (err) {
         console.error('Arama hatası:', err);
-        setResults([]);
+        if (active) setResults([]);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
-    }, 300); // 300ms debounce - hızlı ama sunucuyu yormaz
+    }, 300);
 
-    return () => clearTimeout(delayDebounceFn);
+    return () => {
+      active = false; // Efekt sonlandığında veya query değiştiğinde eski zinciri iptal et
+      clearTimeout(delayDebounceFn);
+    };
   }, [query]);
-
-  // Input değişince
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-  }, []);
 
   // Ürüne tıkla
   const handleProductClick = useCallback((sku: string) => {
     setIsOpen(false);
     setQuery('');
     setSelectedIndex(-1);
-    router.push(`/product/${sku}`);
+    router.push(`/product/${encodeURIComponent(sku)}`); // URL güvenliği için encode ekledik
   }, [router]);
+
+  // Input değişince
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+  }, []);
 
   // Temizle
   const handleClear = useCallback(() => {
@@ -139,11 +162,11 @@ export default function SearchBar() {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => prev < results.length - 1 ? prev + 1 : 0);
+        setSelectedIndex(prev => (prev < results.length - 1 ? prev + 1 : 0));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setSelectedIndex(prev => prev > 0 ? prev - 1 : results.length - 1);
+        setSelectedIndex(prev => (prev > 0 ? prev - 1 : results.length - 1));
         break;
       case 'Enter':
         e.preventDefault();
@@ -154,6 +177,7 @@ export default function SearchBar() {
         }
         break;
       case 'Escape':
+        e.preventDefault();
         setIsOpen(false);
         setSelectedIndex(-1);
         inputRef.current?.blur();
@@ -164,19 +188,8 @@ export default function SearchBar() {
   return (
     <div ref={searchRef} className="relative w-full max-w-xl mx-auto my-6 px-4">
       <div className="relative flex items-center">
-        {/* Arama İkonu */}
-        <svg 
-          className="absolute left-5 w-5 h-5 text-gray-400 pointer-events-none" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth="2.5" 
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-          />
+        <svg className="absolute left-5 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
 
         <input
@@ -190,24 +203,16 @@ export default function SearchBar() {
           className="w-full px-6 py-4 pl-12 pr-12 text-sm bg-white border-2 border-gray-200 rounded-full shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all placeholder:text-gray-400"
           autoComplete="off"
           aria-label="Ürün ara"
-          aria-expanded={isOpen}
-          role="combobox"
         />
 
-        {/* Loading Spinner */}
         {loading && (
           <div className="absolute right-12">
             <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
-        {/* Temizleme Butonu */}
         {query && !loading && (
-          <button
-            onClick={handleClear}
-            className="absolute right-4 p-1 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Aramayı temizle"
-          >
+          <button onClick={handleClear} className="absolute right-4 p-1 rounded-full hover:bg-gray-100 transition-colors" aria-label="Aramayı temizle">
             <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -215,66 +220,38 @@ export default function SearchBar() {
         )}
       </div>
       
-      {/* Sonuç Dropdown'ı */}
       {isOpen && (
-        <div 
-          className="absolute left-4 right-4 z-[100] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-[400px] overflow-y-auto"
-          role="listbox"
-        >
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-xs text-gray-400">Aranıyor...</p>
-            </div>
-          ) : results.length > 0 ? (
-            <>
-              {/* Sonuç sayısı */}
-              <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  {results.length} sonuç bulundu
-                </p>
-              </div>
+        <div className="absolute left-4 right-4 z-[100] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-[400px] overflow-y-auto">
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{results.length} sonuç bulundu</p>
+          </div>
 
-              {results.map((product, index) => (
-                <div
-                  key={product.id}
-                  onClick={() => handleProductClick(product.sku)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  className={`flex items-center gap-4 p-3 cursor-pointer border-b border-gray-50 transition-all ${
-                    index === selectedIndex 
-                      ? 'bg-blue-50 border-l-4 border-l-blue-500' 
-                      : 'hover:bg-gray-50 border-l-4 border-l-transparent'
-                  }`}
-                  role="option"
-                  aria-selected={index === selectedIndex}
-                >
-                  <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center border border-gray-100">
-                    <ProductImage sku={product.sku} title={product.title} storageUrl={storageUrl} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-black text-blue-900 truncate">{product.sku}</p>
-                      {(product as any).pin_count > 0 && (
-                        <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded shrink-0">
-                          {(product as any).pin_count} PIN
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-600 truncate">{product.title}</p>
-                  </div>
-                  <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                  </svg>
+          {results.map((product, index) => (
+            <div
+              key={product.id}
+              onClick={() => handleProductClick(product.sku)}
+              onMouseEnter={() => setSelectedIndex(index)}
+              className={`flex items-center gap-4 p-3 cursor-pointer border-b border-gray-50 transition-all ${
+                index === selectedIndex ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50 border-l-4 border-l-transparent'
+              }`}
+            >
+              <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center border border-gray-100">
+                <ProductImage sku={product.sku} title={product.title} storageUrl={storageUrl} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-black text-blue-900 truncate">{product.sku}</p>
+                  {product.pin_count > 0 && (
+                    <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded shrink-0">{product.pin_count} PIN</span>
+                  )}
                 </div>
-              ))}
-            </>
-          ) : (
-            <div className="p-8 text-center">
-              <div className="text-2xl mb-2">🔍</div>
-              <p className="text-sm font-medium text-gray-700 mb-1">Sonuç Bulunamadı</p>
-              <p className="text-xs text-gray-400">Farklı anahtar kelimelerle tekrar deneyin.</p>
+                <p className="text-xs text-gray-600 truncate">{product.title}</p>
+              </div>
+              <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>

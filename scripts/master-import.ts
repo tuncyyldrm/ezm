@@ -52,6 +52,23 @@ function extractPinCount(text: string): number {
   return match ? parseInt(match[1]) : 0;
 }
 
+// 🛡️ SİSTEMİ BOZMAYAN AKILLI SÜZGEÇ (Sadece tarihleri ve çöpleri durdurur)
+function isInvalidCode(code: string): boolean {
+  const lower = code.toLowerCase().trim();
+  
+  // GG.AA.YYYY veya GG/AA/YYYY tarih formatlarını yakalar
+  const dateRegex = /(?:\d{2}[./-]\d{2}[./-]\d{4})|(?:\d{4}[./-]\d{2}[./-]\d{2})/;
+  
+  return (
+    code.length <= 1 ||
+    code === '-' ||
+    lower.includes('***') ||
+    lower.includes('tarih') ||
+    lower.includes('yolda') || 
+    dateRegex.test(code)
+  );
+}
+
 async function processFile(filePath: string, fileName: string) {
   const rawCategoryName = path.parse(fileName).name; 
   const mainCategoryName = formatCategoryName(rawCategoryName);
@@ -80,14 +97,12 @@ async function processFile(filePath: string, fileName: string) {
   }
 
   const fileContent = fs.readFileSync(filePath, 'utf-8');
-  // Satır sonlarındaki gizli \r karakterlerini temizlemek için split mantığı
   const lines = fileContent.split(/\r?\n/);
   let insertedCount = 0;
   let updatedCount = 0;
 
   for (const line of lines) {
     const trimmedLine = line.trim();
-    // Başlık satırını veya boş satırları atla
     if (!trimmedLine || trimmedLine.startsWith('SKOD') || trimmedLine.startsWith('SKU')) continue;
 
     const columns = trimmedLine.split('\t');
@@ -98,8 +113,7 @@ async function processFile(filePath: string, fileName: string) {
     const title = columns[3].trim();      
     const oemField = columns[5]?.trim();   
 
-    // 🚀 MUHTEŞEM DÜZELTME: 6. sütundan (columns[6]) satırın en sonuna kadar olan 
-    // tüm Tab sütunlarını diziye alıyoruz. Böylece yan yana kaç muadil olursa olsun kaybolmuyor usta!
+    // Sütunları bölme mantığın birebir aynı kalıyor usta, bozmadık.
     const muadilFields = columns.slice(6).map(m => m.trim()).filter(m => m.length > 1 && m !== '-');
 
     if (!sku || !title) continue;
@@ -120,7 +134,6 @@ async function processFile(filePath: string, fileName: string) {
         productId = existingProduct.id;
         isUpdate = true;
 
-        // Herhangi bir değişiklik varsa ürün tablosunu güncelliyoruz
         if (
           existingProduct.title !== title || 
           existingProduct.category_id !== mainCategoryId || 
@@ -142,7 +155,6 @@ async function processFile(filePath: string, fileName: string) {
           updatedCount++;
         }
       } else {
-        // Ürün tamamen yeniyse sıfırdan ekle
         const { data: newProduct, error: pErr } = await supabase
           .from('products')
           .insert({
@@ -163,8 +175,6 @@ async function processFile(filePath: string, fileName: string) {
         insertedCount++;
       }
 
-      // 🔄 MÜKERRER TEMİZLİĞİ: Güncelleme modundaysak, kodların ve markaların eski 
-      // ilişkilerini uçuruyoruz ki yenilerle çakışmasın veya eski veriler birikmesin.
       if (isUpdate) {
         await supabase.from('product_vehicles').delete().eq('product_id', productId);
         await supabase.from('product_codes').delete().eq('product_id', productId);
@@ -196,33 +206,40 @@ async function processFile(filePath: string, fileName: string) {
       // OEM ve Çoklu Muadil Kodları Hazırlama
       const codesPayload: { product_id: number; code_value: string; code_type: 'OEM' | 'MUADIL' }[] = [];
 
-      // OEM alanını işle
+      // OEM alanını işle (Tarih korumalı)
       if (oemField && oemField !== '-') {
         oemField.split(/(?:\s+[-–]\s+)|,+/).map(c => c.trim()).filter(c => c.length > 1).forEach(oemCode => {
-          if (!oemCode.includes('***') && !oemCode.toLowerCase().includes('tarih')) {
+          if (!isInvalidCode(oemCode)) {
             codesPayload.push({ product_id: productId, code_value: oemCode.toUpperCase(), code_type: 'OEM' });
           }
         });
       }
 
-      // 🔗 ÇOKLU MUADİL YAKALAYICI:
-      // columns.slice(6) sayesinde verideki yan yana duran tüm muadil sütunları tek tek taranıyor usta.
+      // 🔗 Ü1, Ü2, Ü3 ÇOKLU MUADİL YAKALAYICI (Akıllı Koruma Eklendi)
       if (muadilFields.length > 0) {
         muadilFields.forEach(rawMuadilItem => {
-          // Hücre içinde ola ki boşluk veya virgülle ayrılmış ek muadiller varsa onları da garantiye alıyoruz
           rawMuadilItem.split(/(?:\s+)|,+/).map(m => m.trim()).filter(m => m.length > 1).forEach(muadilCode => {
-            codesPayload.push({ 
-              product_id: productId, 
-              code_value: muadilCode.toUpperCase(), 
-              code_type: 'MUADIL' 
-            });
+            
+            // 🔥 BURASI DEĞİŞTİ: Kod süzgece giriyor, tarih ise pas geçiliyor, parça kodu ise MUADİL olarak ekleniyor.
+            if (!isInvalidCode(muadilCode)) {
+              codesPayload.push({ 
+                product_id: productId, 
+                code_value: muadilCode.toUpperCase(), 
+                code_type: 'MUADIL' 
+              });
+            }
+
           });
         });
       }
 
       // Toplu insert işlemi tek hamlede veritabanına yollanıyor
       if (codesPayload.length > 0) {
-        await supabase.from('product_codes').insert(codesPayload);
+        // Hafızada oluşabilecek mükerrerleri de engellemek için mini tekilleştirme garantiye alır
+        const uniquePayload = Array.from(
+          new Map(codesPayload.map(item => [`${item.code_value}-${item.code_type}`, item])).values()
+        );
+        await supabase.from('product_codes').insert(uniquePayload);
       }
 
     } catch (lineError: any) {
@@ -243,7 +260,6 @@ async function main() {
     return;
   }
 
-  // 📂 Klasördeki bütün .txt uzantılı dosyaları tarıyoruz
   const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.txt'));
 
   if (files.length === 0) {
@@ -253,7 +269,6 @@ async function main() {
 
   console.log(`📋 Bulunan Toplam Dosya Sayısı: ${files.length}. Sırayla işleniyor...`);
 
-  // Bütün dosyaları sırayla senkron bir döngüde çalıştırıyoruz
   for (const file of files) {
     const fullPath = path.join(dataDir, file);
     console.log(`--------------------------------------------------`);
@@ -261,7 +276,7 @@ async function main() {
     await processFile(fullPath, file);
   }
 
-  console.log(`\n🏁 MUHTEŞEM! Tüm klasör başarıyla tarandı, değişiklikler güncellendi ve tüm bağlı ürünler eksiksiz bağlandı usta.`);
+  console.log(`\n🏁 MUHTEŞEM! Tüm klasör başarıyla tarandı, tarihler ayıklandı ve muadil kodlar güvenle bağlandı usta.`);
 }
 
 main();

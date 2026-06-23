@@ -19,7 +19,7 @@ export default async function HomePage() {
   const safeCategories = (categories || []) as Category[];
 
   const PROJECT_ID = 'erntysmhwfxkrtegirds';
-  const categoryStorageUrl = `https://${PROJECT_ID}.supabase.co/storage/v1/object/public/category-images`;
+  const categoryStorageUrl = `https://${PROJECT_ID}.supabase.co/storage/v1/object/public/product-images`;
 
   return (
     <main className="min-h-screen bg-gray-50">

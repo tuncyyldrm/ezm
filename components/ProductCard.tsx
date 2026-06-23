@@ -15,7 +15,6 @@ export default function ProductCard({ product }: ProductCardProps) {
     .filter((c: any) => c?.code_type === 'OEM' && c?.code_value)
     .map((c: any) => c.code_value);
   
-  // TÜM MUADIL kodlarını filtrele
   const socketCodes = codesArray.filter((c: any) => c?.code_type === 'MUADIL' && c?.code_value);
   
   const storageUrl = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
@@ -55,7 +54,6 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span className="text-[10px] font-bold text-gray-400 uppercase">Bağlı Ürünler ({socketCodes.length})</span>
               <div className="flex flex-wrap gap-1.5">
                 {socketCodes.map((code: any, idx: number) => (
-                  /* 🚀 ÇÖZÜM: Her bilesene benzersiz key ve kırpılmış kod değerini veriyoruz */
                   <SocketBadge key={`${code.code_value}-${idx}`} code={code.code_value} storageUrl={storageUrl} />
                 ))}
               </div>
@@ -71,32 +69,40 @@ export default function ProductCard({ product }: ProductCardProps) {
   );
 }
 
-// Her bir MUADIL kodu için ayrı hover'lu badge
+// Her bir MUADIL kodu için ayrı hover'lu badge (Yenileme Hataları Düzeltildi)
 function SocketBadge({ code, storageUrl }: { code: string; storageUrl: string }) {
   const [isHovered, setIsHovered] = useState(false);
   const [hasImage, setHasImage] = useState(false);
-  const imgUrl = `${storageUrl}/${code}.jpg`;
+  const [liveSrc, setLiveSrc] = useState('');
 
   useEffect(() => {
+    // ⚡ Tarayıcının hatalı 404 önbelleğini ezmek için anlık zaman damgası basıyoruz
+    const freshUrl = `${storageUrl}/${code}.jpg?t=${Date.now()}`;
+    setLiveSrc(freshUrl);
+
     const img = new Image();
     img.onload = () => setHasImage(true);
     img.onerror = () => setHasImage(false);
-    img.src = imgUrl;
-    return () => { img.onload = null; img.onerror = null; };
-  }, [imgUrl]);
+    img.src = freshUrl; // Kontrolü taze URL ile tetikliyoruz usta
+    
+    return () => { 
+      img.onload = null; 
+      img.onerror = null; 
+    };
+  }, [code, storageUrl]);
 
   return (
     <div className="relative inline-block" onMouseEnter={() => hasImage && setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
       <div className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase select-none transition-all ${
         hasImage ? 'cursor-help text-blue-600 bg-blue-50 border-blue-100 hover:bg-blue-100' : 'cursor-default text-gray-500 bg-gray-50 border-gray-200'
       }`}>
-        🔗 {code} {hasImage && <span className="animate-pulse">👁️</span>}
+        {code}
       </div>
 
       {hasImage && isHovered && (
         <div className="absolute left-0 bottom-full mb-2 z-[999] w-40 bg-white p-2 rounded-xl shadow-2xl border border-gray-100 pointer-events-none">
           <div className="w-full h-28 bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center">
-            <img src={imgUrl} alt={code} className="max-w-full max-h-full object-contain p-1" loading="lazy" />
+            <img src={liveSrc} alt={code} className="max-w-full max-h-full object-contain p-1" loading="lazy" />
           </div>
           <div className="text-center text-[9px] font-bold text-gray-400 mt-1 uppercase">{code}</div>
           <div className="absolute top-full left-4 w-2 h-2 bg-white rotate-45 border-r border-b border-gray-100" />
