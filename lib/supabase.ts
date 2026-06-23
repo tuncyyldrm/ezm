@@ -1,20 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Vercel'deki gerçek değişkenleri al, eğer build aşamasındaysa boş string geç
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Vercel'deki gerçek değişkenleri alıyoruz
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// Sadece istemciyi (client) ayağa kaldırıyoruz. 
-// Next.js runtime (canlı) aşamasında bu değişkenleri Vercel'den otomatik okuyacak.
-export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      persistSession: false // Sunucu tarafında ekstra hız ve güvenlik için
-    }
+// ⚡ JET ÇÖZÜM: Build sırasında kütüphanenin patlamaması için geçerli formatta bir placeholder (yedek) URL tanımlıyoruz.
+// Next.js derleme aşamasını sorunsuz atlatacak, canlıda (runtime) ise Vercel'deki gerçek adresin devreye girecek usta.
+const finalUrl = supabaseUrl || 'https://placeholder-project-id.supabase.co';
+const finalKey = supabaseAnonKey || 'placeholder-anon-key-for-build-stage';
+
+export const supabase = createClient(finalUrl, finalKey, {
+  auth: {
+    persistSession: false
   }
-);
+});
 
 // --- TİP TANIMLAMALARI (Aynen Korundu) ---
 export interface Category {
