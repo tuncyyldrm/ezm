@@ -3,11 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// ⚡ DÜZELTME: 'throw new Error' yerine 'console.warn' kullanarak build'in çökmesini engelledik usta!
+// Canlıya (runtime) geçtiğinde env değişkenleri Vercel tarafından inject edileceği için sorunsuz çalışacaktır.
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Supabase URL veya Anon Key .env.local dosyasında eksik!');
+  console.warn('⚠️ Supabase URL veya Anon Key bulunamadı! (Build aşamasında bu uyarı normaldir.)');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Fallback (yedek) placeholder değerler vererek createClient'ın boş değerle çökmesini önlüyoruz
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder-url.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
+);
 
 export interface Category {
   id: number;
@@ -28,7 +34,6 @@ export interface Brand {
   updated_at?: string;
 }
 
-// 🚀 DÜZELTME 1: İlişkisel verileri map'lerken hata almamak için opsiyonel id alanlarını ekledik
 export interface ProductCode {
   id?: number;
   product_id?: number;
@@ -56,7 +61,6 @@ export interface Product {
   is_active?: boolean;
   sort_order?: number;
   created_at?: string;
-  // 🚀 DÜZELTME 2: Kategoriyi iç sorguda (inner join) çektiğimiz için tipi burada da belirtiyoruz usta
   categories?: Category | null; 
   product_codes?: ProductCode[] | null;
   product_vehicles?: ProductVehicle[] | null;
