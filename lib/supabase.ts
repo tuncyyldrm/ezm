@@ -1,20 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Vercel'deki gerçek değişkenleri al, eğer build aşamasındaysa boş string geç
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// ⚡ DÜZELTME: 'throw new Error' yerine 'console.warn' kullanarak build'in çökmesini engelledik usta!
-// Canlıya (runtime) geçtiğinde env değişkenleri Vercel tarafından inject edileceği için sorunsuz çalışacaktır.
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('⚠️ Supabase URL veya Anon Key bulunamadı! (Build aşamasında bu uyarı normaldir.)');
-}
-
-// Fallback (yedek) placeholder değerler vererek createClient'ın boş değerle çökmesini önlüyoruz
+// Sadece istemciyi (client) ayağa kaldırıyoruz. 
+// Next.js runtime (canlı) aşamasında bu değişkenleri Vercel'den otomatik okuyacak.
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder-url.supabase.co', 
-  supabaseAnonKey || 'placeholder-key'
+  supabaseUrl,
+  supabaseAnonKey,
+  {
+    auth: {
+      persistSession: false // Sunucu tarafında ekstra hız ve güvenlik için
+    }
+  }
 );
 
+// --- TİP TANIMLAMALARI (Aynen Korundu) ---
 export interface Category {
   id: number;
   name: string;
