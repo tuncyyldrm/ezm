@@ -11,24 +11,93 @@ interface CategoryClientProps {
 export default function CategoryClient({ categoryName, products }: CategoryClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
+  // 1. PERFORMANS OPTİMİZASYONU: Ürünlerin arama indekslerini önceden hazırlıyoruz.
+  // Bu sayede kullanıcı her harf yazdığında ağır döngüler (flatMap, map, join) tekrar çalışmaz.
+  const indexedProducts = useMemo(() => {
+    return products.map(product => {
+      // Temizlenmiş SKU ve OEM kodları
+      const cleanSku = product.sku ? product.sku.replace(/[\s\-_./]/g, '').toLocaleLowerCase('tr-TR') : '';
+      const rawSku = product.sku ? product.sku.toLocaleLowerCase('tr-TR') : '';
+      const title = product.title ? product.title.toLocaleLowerCase('tr-TR') : '';
+      
+      const codes: string[] = [];
+      const cleanCodes: string[] = [];
+      product.product_codes?.forEach((c: any) => {
+        if (c.code_value) {
+          const val = c.code_value.toLocaleLowerCase('tr-TR');
+          codes.push(val);
+          cleanCodes.push(val.replace(/[\s\-_./]/g, ''));
+        }
+      });
+
+      const vehicles = product.product_vehicles?.map((pv: any) => pv.brands?.name?.toLocaleLowerCase('tr-TR')).filter(Boolean) || [];
+
+      return {
+        origin: product,
+        // Öncelik sıralaması yapabilmek için alanları ayrı tutuyoruz
+        sku: rawSku,
+        cleanSku,
+        title,
+        codes,
+        cleanCodes,
+        vehicles,
+        // Genel arama havuzu (içerir kontrolü için)
+        fullPool: [rawSku, cleanSku, title, ...codes, ...cleanCodes, ...vehicles].join(' ')
+      };
+    });
+  }, [products]);
+
+  // 2. GELİŞMİŞ B2B ARAMA VE PUANLAMA ALGORİTMASI
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return products;
-    const searchWords = searchTerm.toLocaleLowerCase('tr-TR').trim().split(/\s+/);
-    
-    return products.filter(product => {
-      const pool = [
-        product.sku, product.sku?.replace(/[\s-]/g, ''),
-        product.title,
-        ...(product.product_codes?.flatMap((c: any) => [c.code_value, c.code_value?.replace(/[\s-]/g, '')]).filter(Boolean) || []),
-        ...(product.product_vehicles?.map((pv: any) => pv.brands?.name).filter(Boolean) || [])
-      ].filter(Boolean).join(' ').toLocaleLowerCase('tr-TR');
 
-      return searchWords.every(w => {
-        const cw = w.replace(/[\s-]/g, '');
-        return pool.includes(w) || pool.includes(cw);
-      });
-    });
-  }, [searchTerm, products]);
+    const cleanSearch = searchTerm.toLocaleLowerCase('tr-TR').trim();
+    const searchWords = cleanSearch.split(/\s+/);
+    const compactSearch = cleanSearch.replace(/[\s\-_./]/g, '');
+
+    // Eşleşenleri bul ve puanla
+    const scored = indexedProducts
+      .map(item => {
+        let score = 0;
+        let isMatch = false;
+
+        // B2B ÖNCELİK 1: Arama terimi SKU veya OEM kodu ile birebir başlıyor mu? (En yüksek öncelik)
+        if (item.cleanSku.startsWith(compactSearch) || item.sku.startsWith(cleanSearch)) {
+          score += 100;
+          isMatch = true;
+        }
+        
+        const codeStartsWith = item.cleanCodes.some(c => c.startsWith(compactSearch)) || item.codes.some(c => c.startsWith(cleanSearch));
+        if (codeStartsWith) {
+          score += 80;
+          isMatch = true;
+        }
+
+        // B2B ÖNCELİK 2: Parça adı (Title) aranan kelimeyle mi başlıyor?
+        if (item.title.startsWith(cleanSearch)) {
+          score += 50;
+          isMatch = true;
+        }
+
+        // B2B ÖNCELİK 3: Çoklu kelime aramalarında tüm kelimeler havuzda var mı? (Geriye dönük uyumluluk)
+        const hasAllWords = searchWords.every(word => {
+          const compactWord = word.replace(/[\s\-_./]/g, '');
+          return item.fullPool.includes(word) || item.fullPool.includes(compactWord);
+        });
+
+        if (hasAllWords) {
+          score += 10; // Havuzda var ama en başta değilse düşük puan
+          isMatch = true;
+        }
+
+        return { product: item.origin, score, isMatch };
+      })
+      .filter(item => item.isMatch)
+      // Puanı yüksek olanı (yani aranan kelimeyle başlayanı) en üste sırala
+      .sort((a, b) => b.score - a.score);
+
+    return scored.map(s => s.product);
+  }, [searchTerm, indexedProducts, products]);
 
   const isEmpty = filteredProducts.length === 0;
 
@@ -42,7 +111,7 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
             </svg>
             <input
               type="text"
-              placeholder="Marka, parça adı, SKU veya OEM kodunu karışık yazın..."
+              placeholder="Üretici kodu, OEM no veya parça adını yazın (örn: 1K0...)"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-16 py-4 rounded-xl text-sm font-medium outline-none shadow-inner border border-transparent focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all"
