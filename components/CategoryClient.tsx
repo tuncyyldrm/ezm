@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 
 interface CategoryClientProps {
@@ -9,13 +9,23 @@ interface CategoryClientProps {
 }
 
 export default function CategoryClient({ categoryName, products }: CategoryClientProps) {
-  const [searchTerm, setSearchTerm] = useState('');
+  // Inputun anlık değerini tutan hafif state (Kasmayı önleyen ana unsur)
+  const [inputValue, setInputValue] = useState('');
+  // Gerçek filtrelemeyi tetikleyecek geciktirilmiş state
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // 1. PERFORMANS OPTİMİZASYONU: Ürünlerin arama indekslerini önceden hazırlıyoruz.
-  // Bu sayede kullanıcı her harf yazdığında ağır döngüler (flatMap, map, join) tekrar çalışmaz.
+  // 1. DEBOUNCE EFFECT: Kullanıcı yazmayı bırakınca 250ms sonra aramayı tetikle
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(inputValue);
+    }, 250); // 250ms ideal süredir, hissiyatı bozmaz kasmayı sıfırlar.
+
+    return () => clearTimeout(timer);
+  }, [inputValue]);
+
+  // 2. PERFORMANS OPTİMİZASYONU: Ürün indeksleme havuzu
   const indexedProducts = useMemo(() => {
     return products.map(product => {
-      // Temizlenmiş SKU ve OEM kodları
       const cleanSku = product.sku ? product.sku.replace(/[\s\-_./]/g, '').toLocaleLowerCase('tr-TR') : '';
       const rawSku = product.sku ? product.sku.toLocaleLowerCase('tr-TR') : '';
       const title = product.title ? product.title.toLocaleLowerCase('tr-TR') : '';
@@ -34,34 +44,30 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
 
       return {
         origin: product,
-        // Öncelik sıralaması yapabilmek için alanları ayrı tutuyoruz
         sku: rawSku,
         cleanSku,
         title,
         codes,
         cleanCodes,
         vehicles,
-        // Genel arama havuzu (içerir kontrolü için)
         fullPool: [rawSku, cleanSku, title, ...codes, ...cleanCodes, ...vehicles].join(' ')
       };
     });
   }, [products]);
 
-  // 2. GELİŞMİŞ B2B ARAMA VE PUANLAMA ALGORİTMASI
+  // 3. GELİŞMİŞ B2B ARAMA VE PUANLAMA ALGORİTMASI (Artık debouncedSearch dinliyor)
   const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return products;
+    if (!debouncedSearch.trim()) return products;
 
-    const cleanSearch = searchTerm.toLocaleLowerCase('tr-TR').trim();
+    const cleanSearch = debouncedSearch.toLocaleLowerCase('tr-TR').trim();
     const searchWords = cleanSearch.split(/\s+/);
     const compactSearch = cleanSearch.replace(/[\s\-_./]/g, '');
 
-    // Eşleşenleri bul ve puanla
     const scored = indexedProducts
       .map(item => {
         let score = 0;
         let isMatch = false;
 
-        // B2B ÖNCELİK 1: Arama terimi SKU veya OEM kodu ile birebir başlıyor mu? (En yüksek öncelik)
         if (item.cleanSku.startsWith(compactSearch) || item.sku.startsWith(cleanSearch)) {
           score += 100;
           isMatch = true;
@@ -73,33 +79,35 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
           isMatch = true;
         }
 
-        // B2B ÖNCELİK 2: Parça adı (Title) aranan kelimeyle mi başlıyor?
         if (item.title.startsWith(cleanSearch)) {
           score += 50;
           isMatch = true;
         }
 
-        // B2B ÖNCELİK 3: Çoklu kelime aramalarında tüm kelimeler havuzda var mı? (Geriye dönük uyumluluk)
         const hasAllWords = searchWords.every(word => {
           const compactWord = word.replace(/[\s\-_./]/g, '');
           return item.fullPool.includes(word) || item.fullPool.includes(compactWord);
         });
 
         if (hasAllWords) {
-          score += 10; // Havuzda var ama en başta değilse düşük puan
+          score += 10;
           isMatch = true;
         }
 
         return { product: item.origin, score, isMatch };
       })
       .filter(item => item.isMatch)
-      // Puanı yüksek olanı (yani aranan kelimeyle başlayanı) en üste sırala
       .sort((a, b) => b.score - a.score);
 
     return scored.map(s => s.product);
-  }, [searchTerm, indexedProducts, products]);
+  }, [debouncedSearch, indexedProducts, products]);
 
   const isEmpty = filteredProducts.length === 0;
+
+  const handleClear = () => {
+    setInputValue('');
+    setDebouncedSearch('');
+  };
 
   return (
     <div className="w-full space-y-6 min-h-[calc(100vh-250px)] flex flex-col">
@@ -112,12 +120,12 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
             <input
               type="text"
               placeholder="Üretici kodu, OEM no veya parça adını yazın (örn: 1K0...)"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)} // Burası artık doğrudan ağır filtreleme fonksiyonunu tetiklemiyor, kasma bitti!
               className="w-full pl-12 pr-16 py-4 rounded-xl text-sm font-medium outline-none shadow-inner border border-transparent focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all"
             />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-bold px-2.5 py-1.5 rounded-lg">
+            {inputValue && (
+              <button onClick={handleClear} className="absolute right-3 top-1/2 -translate-y-1/2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-bold px-2.5 py-1.5 rounded-lg">
                 TEMİZLE
               </button>
             )}
@@ -128,7 +136,7 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
       <div className="flex items-center justify-between border-b border-gray-100 pb-4">
         <div>
           <h1 className="text-xl font-black text-gray-900 uppercase">{categoryName}</h1>
-          {searchTerm && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold text-blue-600">"{searchTerm}"</span> için sonuçlar</p>}
+          {debouncedSearch && <p className="text-xs text-gray-500 mt-0.5"><span className="font-semibold text-blue-600">"{debouncedSearch}"</span> için sonuçlar</p>}
         </div>
         <div className={`text-xs font-bold px-3 py-1.5 rounded-full border ${!isEmpty ? 'text-blue-700 bg-blue-50 border-blue-100' : 'text-red-700 bg-red-50 border-red-100'}`}>
           {filteredProducts.length} Ürün
@@ -146,15 +154,10 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
               <div className="text-2xl mb-4">🔍</div>
               <h3 className="text-base font-bold text-gray-800 mb-2">Eşleşen Parça Bulunamadı</h3>
               <p className="text-sm text-gray-500 mb-6">Farklı anahtar kelimelerle tekrar deneyin.</p>
-              <button onClick={() => setSearchTerm('')} className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+              <button onClick={handleClear} className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
                 Aramayı Temizle
               </button>
             </div>
-          </div>
-        )}
-        {filteredProducts.length > 0 && filteredProducts.length < 4 && (
-          <div className="mt-6 min-h-[200px] flex items-center justify-center text-gray-400 text-sm">
-            Bu kategorideki tüm ürünler görüntüleniyor
           </div>
         )}
       </div>
