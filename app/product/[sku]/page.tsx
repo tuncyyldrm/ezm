@@ -143,17 +143,21 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               </div>
               
               {/* Basit WhatsApp Butonu */}
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-5 flex items-center justify-center gap-2 px-5 py-3 bg-[#25D366] hover:bg-[#20ba56] text-white text-sm font-bold rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
-              >
-                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.4 0 11.91 0c3.153.001 6.118 1.23 8.351 3.463 2.233 2.233 3.46 5.199 3.46 8.351-.003 6.557-5.338 11.907-11.85 11.907-.008 0-.013 0-.021 0-2.002-.001-3.97-.53-5.713-1.534L0 24zm6.59-4.846c1.6.95 3.488 1.449 5.312 1.451h.022c5.442 0 9.868-4.426 9.87-9.87.001-2.637-1.03-5.115-2.908-6.993-1.879-1.879-4.357-2.909-6.995-2.91C6.449 1.18 2.022 5.606 2.02 11.049c-.001 1.884.498 3.73 1.442 5.33l-.992 3.623 3.715-.974z"/>
-                </svg>
-                <span>WhatsApp'tan Sor</span>
-              </a>
+              <div className="w-full mt-5 space-y-2">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-3 px-5 py-4 bg-[#25D366] hover:bg-[#20ba56] text-white text-sm font-black rounded-xl shadow-md hover:shadow-xl transition-all duration-300 group select-none relative overflow-hidden"
+                >
+                  <span className="absolute inset-0 w-full h-full bg-white/10 transform -skew-x-12 -translate-x-full group-hover:animate-[shine_0.8s_ease-in-out]" />
+                  <svg className="w-5 h-5 fill-current animate-pulse" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.4 0 11.91 0c3.153.001 6.118 1.23 8.351 3.463 2.233 2.233 3.46 5.199 3.46 8.351-.003 6.557-5.338 11.907-11.85 11.907-.008 0-.013 0-.021 0-2.002-.001-3.97-.53-5.713-1.534L0 24zm6.59-4.846c1.6.95 3.488 1.449 5.312 1.451h.022c5.442 0 9.868-4.426 9.87-9.87.001-2.637-1.03-5.115-2.908-6.993-1.879-1.879-4.357-2.909-6.995-2.91C6.449 1.18 2.022 5.606 2.02 11.049c-.001 1.884.498 3.73 1.442 5.33l-.992 3.623 3.715-.974zm10.154-6.6c-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.668.149-.198.297-.766.967-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.174.2-.298.298-.497.099-.198.05-.371-.025-.521-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347z"/>
+                  </svg>
+                  <span>Whatsapp Sor</span>
+                </a>
+                
+              </div>
             </div>
 
             {/* Sağ - Detaylar */}
