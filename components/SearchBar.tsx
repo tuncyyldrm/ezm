@@ -43,7 +43,6 @@ export default function SearchBar() {
 
   // Debounce ile sunucu tarafında arama
   useEffect(() => {
-    // 🛡️ Asenkron kontrol kilidi: Eski isteklerin yeni sonuçları ezmesini engeller
     let active = true;
 
     const delayDebounceFn = setTimeout(async () => {
@@ -64,7 +63,7 @@ export default function SearchBar() {
         const cleanQuery = trimmed.replace(/[- ]/g, '');
 
         // Paralel sorgular
-        const [titleRes, oemRes, brandRes] = await Promise.all([
+        const [titleRes, codeRes, brandRes] = await Promise.all([
           // 1. Başlık ve SKU'da Regex arama
           (async () => {
             let queryBuilder = supabase
@@ -80,12 +79,15 @@ export default function SearchBar() {
             return queryBuilder.limit(8);
           })(),
           
-          // 2. OEM kodlarında arama
-          supabase
-            .from('product_codes')
-            .select('products!inner(id, sku, title, pin_count)')
-            .ilike('code_value', `%${cleanQuery}%`)
-            .limit(5),
+          // 2. Ürün Kodlarında (OEM, MUADIL ve yeni eklenen URETICI) Arama
+          // 🌟 GÜNCELLEME: Herhangi bir code_type ayrımı yapmadan direkt tüm kodlarda arıyoruz. 
+          // Böylece eklediğiniz 'URETICI' kodları da otomatik olarak kapsama girer ve gizli kalır.
+supabase
+  .from('product_codes')
+  .select('products!inner(id, sku, title, pin_count)')
+  // cleanQuery yerine hem tireli hem tiresiz kombinasyonu kapsayacak şekilde trimmed kullanın
+  .ilike('code_value', `%${trimmed}%`) 
+  .limit(8),
           
           // 3. Marka adında Regex arama
           (async () => {
@@ -98,12 +100,11 @@ export default function SearchBar() {
           })()
         ]);
 
-        // Eğer kullanıcı yeni harfler yazdıysa ve bu eski istek geç geldiyse state'i GÜNCELLEME!
         if (!active) return;
 
         const titleData = (titleRes.data || []) as Product[];
         
-        const oemData = (oemRes.data || [])
+        const codeData = (codeRes.data || [])
           .map((item: any) => item.products)
           .filter(Boolean) as Product[];
         
@@ -112,7 +113,7 @@ export default function SearchBar() {
           .filter(Boolean) as Product[];
 
         // Birleştir ve güvenli tekilleştir
-        const combined = [...titleData, ...oemData, ...brandData];
+        const combined = [...titleData, ...codeData, ...brandData];
         const unique = Array.from(
           new Map(combined.map(item => [item.id, item])).values()
         ).slice(0, 8);
@@ -128,7 +129,7 @@ export default function SearchBar() {
     }, 300);
 
     return () => {
-      active = false; // Efekt sonlandığında veya query değiştiğinde eski zinciri iptal et
+      active = false;
       clearTimeout(delayDebounceFn);
     };
   }, [query]);
@@ -138,7 +139,7 @@ export default function SearchBar() {
     setIsOpen(false);
     setQuery('');
     setSelectedIndex(-1);
-    router.push(`/product/${encodeURIComponent(sku)}`); // URL güvenliği için encode ekledik
+    router.push(`/product/${encodeURIComponent(sku)}`);
   }, [router]);
 
   // Input değişince
@@ -199,7 +200,7 @@ export default function SearchBar() {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setIsOpen(true)}
-          placeholder="Parça adı, SKU, OEM kodu veya marka ile ara..."
+          placeholder="Parça adı, SKU, OEM veya Üretici kodu ile ara..."
           className="w-full px-6 py-4 pl-12 pr-12 text-sm bg-white border-2 border-gray-200 rounded-full shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all placeholder:text-gray-400"
           autoComplete="off"
           aria-label="Ürün ara"

@@ -15,7 +15,7 @@ export const supabase = createClient(finalUrl, finalKey, {
   }
 });
 
-// --- TİP TANIMLAMALARI (Aynen Korundu) ---
+// --- TİP TANIMLAMALARI ---
 export interface Category {
   id: number;
   name: string;
@@ -39,7 +39,8 @@ export interface ProductCode {
   id?: number;
   product_id?: number;
   code_value: string;
-  code_type: 'OEM' | 'MUADIL';
+  // 🌟 GÜNCELLEME: Veritabanına eklediğimiz 'URETICI' tipini buraya da ekledik
+  code_type: 'OEM' | 'MUADIL' | 'URETICI'; 
 }
 
 export interface ProductVehicle {

@@ -32,6 +32,9 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
       
       const codes: string[] = [];
       const cleanCodes: string[] = [];
+      
+      // 🌟 GÜNCELLEME: Burada filtre koymadığımız için 'OEM', 'MUADIL' ve yeni eklenen 'URETICI' 
+      // tiplerinin tamamı otomatik olarak bu havuzun içine dahil ediliyor.
       product.product_codes?.forEach((c: any) => {
         if (c.code_value) {
           const val = c.code_value.toLocaleLowerCase('tr-TR');
@@ -55,7 +58,7 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
     });
   }, [products]);
 
-  // 3. GELİŞMİŞ B2B ARAMA VE PUANLAMA ALGORİTMASI (Artık debouncedSearch dinliyor)
+  // 3. GELİŞMİŞ B2B ARAMA VE PUANLAMA ALGORİTMASI
   const filteredProducts = useMemo(() => {
     if (!debouncedSearch.trim()) return products;
 
@@ -68,22 +71,26 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
         let score = 0;
         let isMatch = false;
 
+        // SKU Önceliği (1. Sırada)
         if (item.cleanSku.startsWith(compactSearch) || item.sku.startsWith(cleanSearch)) {
           score += 100;
           isMatch = true;
         }
         
+        // 🌟 Ürün Kodları Önceliği (OEM, MUADIL ve ÜRETİCİ kodları baş harften eşleşirse yüksek puan alır)
         const codeStartsWith = item.cleanCodes.some(c => c.startsWith(compactSearch)) || item.codes.some(c => c.startsWith(cleanSearch));
         if (codeStartsWith) {
           score += 80;
           isMatch = true;
         }
 
+        // Başlık Önceliği
         if (item.title.startsWith(cleanSearch)) {
           score += 50;
           isMatch = true;
         }
 
+        // Havuzda Kelime Arama (Kombinasyon eşleşmeleri)
         const hasAllWords = searchWords.every(word => {
           const compactWord = word.replace(/[\s\-_./]/g, '');
           return item.fullPool.includes(word) || item.fullPool.includes(compactWord);
@@ -119,9 +126,9 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
             </svg>
             <input
               type="text"
-              placeholder="Üretici kodu, OEM no veya parça adını yazın (örn: 1K0...)"
+              placeholder="Üretici kodu, OEM no veya parça adını yazın (örn: 46-0001...)"
               value={inputValue}
-              onChange={e => setInputValue(e.target.value)} // Burası artık doğrudan ağır filtreleme fonksiyonunu tetiklemiyor, kasma bitti!
+              onChange={e => setInputValue(e.target.value)}
               className="w-full pl-12 pr-16 py-4 rounded-xl text-sm font-medium outline-none shadow-inner border border-transparent focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all"
             />
             {inputValue && (
@@ -146,6 +153,7 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
       <div className="flex-1">
         {!isEmpty ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {/* 🌟 GÜVENLİK: Alt bileşene aktarılan 'p' (Product) nesnesinde üretici kodları olsa dahi, ProductCard bileşeniniz bunları ekrana basmadığı müddetçe gizlilik korunur. */}
             {filteredProducts.map(p => <ProductCard key={p.id} product={p} />)}
           </div>
         ) : (
