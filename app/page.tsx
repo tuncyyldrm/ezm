@@ -47,11 +47,11 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       {/* Hero */}
-      <header className="bg-gradient-to-br from-blue-700 to-blue-900 text-white text-center py-16 px-4 relative overflow-hidden">
+      <header className="bg-gradient-to-br from-blue-900 to-zinc-900 text-white text-center py-16 px-4 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url(/grid.svg)' }} />
         <div className="relative z-10 max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight mb-3">
-            EZM OTO
+<h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-wider text-white mb-2">
+            EZM <span className="text-blue-500">OTO</span>
           </h1>
           <p className="text-xl md:text-2xl text-blue-200 font-bold mb-4">
             Yedek Parça Kataloğu
