@@ -20,7 +20,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group">
       {/* Ürün Görseli */}
       <Link href={`/product/${encodeURIComponent(product.sku)}`} className="block">
-        <div className="relative h-40 flex items-center justify-center bg-gray-50 rounded-xl mb-3 overflow-hidden group-hover:scale-[1.02] transition-transform">
+        <div className="relative h-40 flex items-center justify-center bg-white-50 rounded-xl mb-3 overflow-hidden group-hover:scale-[1.02] transition-transform">
           <ProductImage sku={product.sku} title={product.title} storageUrl={STORAGE} />
           {pin > 0 && (
             <span className="absolute top-2 right-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
