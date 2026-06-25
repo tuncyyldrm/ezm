@@ -7,7 +7,7 @@ import ProductImage from '@/components/ProductImage';
 
 function createTurkishRegexPattern(text: string): string {
   return text
-    .replace(/[-+()]/g, '')
+    .replace(/[+()]/g, '') // Tireyi (-) buradan sildik, koruyoruz.
     .replace(/[iİıI]/g, '[iİıI]')
     .replace(/[şŞsS]/g, '[şŞsS]')
     .replace(/[çÇcC]/g, '[çÇcC]')
@@ -41,7 +41,7 @@ export default function SearchBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Debounce ile sunucu tarafında arama
+// Debounce ile sunucu tarafında arama
   useEffect(() => {
     let active = true;
 
@@ -60,7 +60,10 @@ export default function SearchBar() {
       
       try {
         const keywords = trimmed.split(/\s+/);
-        const cleanQuery = trimmed.replace(/[- ]/g, '');
+        
+        // Regex pattern'ini oluştururken tireleri opsiyonel (-?) hale getiriyoruz
+        // Böylece kullanıcı "EUN" yazsa da "E-UN" yazsa da regex yakalayabilir.
+        const flexiblePattern = createTurkishRegexPattern(trimmed).replace(/-/g, '-?');
 
         // Paralel sorgular
         const [titleRes, codeRes, brandRes] = await Promise.all([
@@ -79,15 +82,15 @@ export default function SearchBar() {
             return queryBuilder.limit(8);
           })(),
           
-          // 2. Ürün Kodlarında (OEM, MUADIL ve yeni eklenen URETICI) Arama
-          // 🌟 GÜNCELLEME: Herhangi bir code_type ayrımı yapmadan direkt tüm kodlarda arıyoruz. 
-          // Böylece eklediğiniz 'URETICI' kodları da otomatik olarak kapsama girer ve gizli kalır.
-supabase
-  .from('product_codes')
-  .select('products!inner(id, sku, title, pin_count)')
-  // cleanQuery yerine hem tireli hem tiresiz kombinasyonu kapsayacak şekilde trimmed kullanın
-  .ilike('code_value', `%${trimmed}%`) 
-  .limit(8),
+          // 2. Ürün Kodlarında (OEM, MUADIL, URETICI) Esnek Regex Arama
+          // 🌟 GÜNCELLEME: Burada da imatch (Regex) kullanarak tireli/tiresiz sorununu çözüyoruz.
+          (async () => {
+            return supabase
+              .from('product_codes')
+              .select('products!inner(id, sku, title, pin_count)')
+              .filter('code_value', 'imatch', `.*${flexiblePattern}.*`)
+              .limit(8);
+          })(),
           
           // 3. Marka adında Regex arama
           (async () => {
@@ -95,7 +98,7 @@ supabase
             return supabase
               .from('product_vehicles')
               .select('products!inner(id, sku, title, pin_count)')
-              .or(`brands.name.imatch..*${brandPattern}.*`)
+              .filter('brands.name', 'imatch', `.*${brandPattern}.*`)
               .limit(3);
           })()
         ]);
@@ -104,6 +107,7 @@ supabase
 
         const titleData = (titleRes.data || []) as Product[];
         
+        // inner join datalarını temiz bir şekilde çekiyoruz
         const codeData = (codeRes.data || [])
           .map((item: any) => item.products)
           .filter(Boolean) as Product[];

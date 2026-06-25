@@ -15,9 +15,19 @@ export default function ProductCard({ product }: ProductCardProps) {
   const oems = codes.filter((c: any) => c?.code_type === 'OEM').map((c: any) => c.code_value);
   const sockets = codes.filter((c: any) => c?.code_type === 'MUADIL').map((c: any) => c.code_value);
   const pin = product?.pin_count || 0;
+  const isNew = product?.is_new; // 👈 Yeni özelliğini buradan çekiyoruz
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group">
+    // 🌟 Karta "relative" sınıfı eklendi ki absolute olan yeni rozeti düzgün konumlanabilsin
+    <div className="relative bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group">
+      
+      {/* 🌟 YENİ ROZETİ ENTEGRASYONU */}
+      {isNew && (
+        <span className="absolute top-4 left-4 z-10 bg-green-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-sm pointer-events-none uppercase tracking-wider">
+          YENİ
+        </span>
+      )}
+
       {/* Ürün Görseli */}
       <Link href={`/product/${encodeURIComponent(product.sku)}`} className="block">
         <div className="relative h-40 flex items-center justify-center bg-white-50 rounded-xl mb-3 overflow-hidden group-hover:scale-[1.02] transition-transform">
