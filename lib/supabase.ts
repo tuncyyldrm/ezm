@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
+// --- BROWSER / BUILD GÜVENLİĞİ ---
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://erntysmhwfxkrtegirds.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
+
 // --- BAĞLANTI ---
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  supabaseUrl,
+  supabaseAnonKey,
   { auth: { persistSession: false } }
 );
 
