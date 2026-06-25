@@ -1,8 +1,12 @@
+// app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
+
+// 🌟 1. ADIM: Next.js derleyicisine bu sayfayı statik olarak üretmemesini söylüyoruz
+export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,11 +15,11 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // 🌟 ÇÖZÜM: Giriş yaparken Middleware ile aynı çerez yapısını kullanan Browser Client'ı oluşturuyoruz
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // 🌟 2. ADIM: Build anında değişkenler boş gelse bile çökmesini engellemek için yedek (fallback) ekliyoruz
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+
+  const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,15 +36,12 @@ export default function LoginPage() {
         throw new Error('Giriş bilgileri hatalı veya yetkiniz yok.');
       }
 
-      // Kullanıcı bilgisini çekip kontrol edelim (Opsiyonel ama hata ayıklamak için harika)
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.user_metadata?.role !== 'admin') {
-        // Eğer giren kişi admin değilse oturumu kapat ve hata fırlat
         await supabase.auth.signOut();
         throw new Error('Bu panele erişim yetkiniz bulunmamaktadır.');
       }
 
-      // Her şey yolundaysa yönlendir ve sayfayı yenile
       router.push('/admin');
       router.refresh();
     } catch (err: any) {
