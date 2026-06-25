@@ -3,21 +3,28 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // 🌟 1. ADIM: Güvenli değişken kontrolü (Build ve Runtime koruması)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+
+  // İlk başta boş bir response oluşturuyoruz
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
+  // Supabase sunucu istemcisini oluşturuyoruz
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
+          // Next.js 16+ uyumluluğu için çerezleri hem request hem response'a güvenli şekilde dağıtıyoruz
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
             request: {
@@ -32,18 +39,23 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // 🌟 KRİTİK GÜNCELLEME: getSession yerine getUser kullanıyoruz (Güvenlik ve güncel çerezler için)
+  // Sahte link aktifse (yani Vercel değişkenleri henüz bağlamadıysa) middleware'i güvenle bypass et
+  if (supabaseUrl.includes('placeholder-project')) {
+    return response;
+  }
+
+  // 🌟 Kullanıcı kontrolü
   const { data: { user } } = await supabase.auth.getUser();
 
   // Eğer kullanıcı /admin sayfalarına erişmeye çalışıyorsa
   if (request.nextUrl.pathname.startsWith('/admin')) {
     
-    // 1. Durum: Kullanıcı giriş yapmamışsa direkt login sayfasına at
+    // 1. Durum: Kullanıcı giriş yapmamışsa login sayfasına at
     if (!user) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // 2. Durum: Giriş yapmış ama SQL ile verdiğimiz "admin" rolü yoksa ana sayfaya/login'e postala
+    // 2. Durum: Giriş yapmış ama "admin" rolü yoksa login'e postala
     const userRole = user.user_metadata?.role;
     if (userRole !== 'admin') {
       return NextResponse.redirect(new URL('/login?error=yetkisiz', request.url));
@@ -54,5 +66,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  // Middleware'in gereksiz yere statik varlıklarda çalışıp sunucuyu yormasını engelliyoruz
+  matcher: [
+    '/admin/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };
