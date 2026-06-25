@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+// 1. ADIM: Google Analytics bileşenini import edin
+import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -157,6 +159,9 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
+
+        {/* 2. ADIM: Google Analytics'i buraya yerleştirin (G- ile başlayan kimliğinizi yazın) */}
+        <GoogleAnalytics gaId="G-JEB7YLM2RV" />
       </body>
     </html>
   );
