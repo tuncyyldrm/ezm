@@ -110,7 +110,7 @@ function ProductFormContent() {
 
   const sectionCard = "bg-white p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6";
   const labelStyle = "block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2";
-  const inputStyle = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-medium";
+  const inputStyle = "px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-medium";
 
   return (
     <div className="bg-slate-50 min-height-screen pb-20">

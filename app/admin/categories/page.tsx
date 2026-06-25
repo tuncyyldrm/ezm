@@ -213,7 +213,7 @@ export default function CategoriesPage() {
               {/* Modern Dropzone Görsel Alanı */}
               <div>
                 <label className={labelStyle}>Kategori Görseli</label>
-                <div className="relative group aspect-[4/3] bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-all">
+                <div className="relative group bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-all">
                   {previewUrl ? (
                     <img src={previewUrl} className="w-full h-full object-cover" alt="Önizleme" onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg...' }} />
                   ) : (
