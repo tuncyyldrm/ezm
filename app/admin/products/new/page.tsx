@@ -1,14 +1,16 @@
 // app/admin/products/new/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+
 export const dynamic = 'force-dynamic';
 
 const BUCKET_URL = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
 
-export default function ProductFormPage() {
+// 🌟 1. ASIL FORM İÇERİĞİ VE MANTIK ALANI (useSearchParams burada güvenle çalışır)
+function ProductFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -82,19 +84,16 @@ export default function ProductFormPage() {
           supabase.from("product_vehicles").delete().eq("product_id", productId)
         ]);
       } else {
-// Hatayı (error) da destructure ederek yakalıyoruz
-const { data: newP, error } = await supabase
-  .from("products")
-  .insert(productPayload)
-  .select("id")
-  .single();
+        const { data: newP, error } = await supabase
+          .from("products")
+          .insert(productPayload)
+          .select("id")
+          .single();
 
-// Eğer veritabanı hata döndüyse fırlat ki catch bloğuna düşsün
-if (error) throw new Error(`Ürün eklenemedi: ${error.message}`);
-if (!newP) throw new Error("Ürün verisi alınamadı.");
+        if (error) throw new Error(`Ürün eklenemedi: ${error.message}`);
+        if (!newP) throw new Error("Ürün verisi alınamadı.");
 
-// Artık id'yi güvenle atayabiliriz
-productId = newP.id;
+        productId = newP.id;
       }
 
       const validCodes = codes.filter(c => c.code_value.trim());
@@ -109,14 +108,12 @@ productId = newP.id;
     }
   };
 
-  // Stil Tanımlamaları
   const sectionCard = "bg-white p-8 rounded-2xl shadow-sm border border-slate-100 space-y-6";
   const labelStyle = "block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2";
-  const inputStyle = " px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-medium";
+  const inputStyle = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-medium";
 
   return (
     <div className="bg-slate-50 min-height-screen pb-20">
-      {/* Header Area */}
       <div className="flex items-center justify-between py-8">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -130,10 +127,7 @@ productId = newP.id;
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left Side: Main Info */}
         <div className="lg:col-span-2 space-y-8">
-          
           <div className={sectionCard}>
             <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
               <span className="text-xl">📋</span>
@@ -194,13 +188,11 @@ productId = newP.id;
           </div>
         </div>
 
-        {/* Right Side: Media & Settings */}
         <div className="space-y-8">
-          
           <div className={sectionCard}>
             <h2 className={labelStyle}>Görsel Yönetimi</h2>
             <div className="relative group">
-              <div className=" bg-slate-100 rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 flex items-center justify-center transition-all group-hover:border-indigo-300">
+              <div className="bg-slate-100 rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 flex items-center justify-center transition-all group-hover:border-indigo-300">
                 {previewUrl ? (
                   <img src={previewUrl} className="w-full h-full object-cover" alt="Önizleme" />
                 ) : (
@@ -253,5 +245,18 @@ productId = newP.id;
         </div>
       </form>
     </div>
+  );
+}
+
+// 🌟 2. NEXT.JS'E EXPORT EDİLEN VE HATAYI BAĞLAYAN ANA SARMALAYICI (DEFAULT EXPORT)
+export default function ProductFormPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="text-sm font-bold text-slate-400 animate-pulse tracking-wider uppercase">Sayfa Hazırlanıyor...</div>
+      </div>
+    }>
+      <ProductFormContent />
+    </Suspense>
   );
 }
