@@ -5,21 +5,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 
-// 🌟 1. ADIM: Next.js derleyicisine bu sayfayı statik olarak üretmemesini söylüyoruz
 export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // 🌟 Şifre görünürlük durumu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-
-  // 🌟 2. ADIM: Build anında değişkenler boş gelse bile çökmesini engellemek için yedek (fallback) ekliyoruz
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-project.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
-
-  const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    // --- BROWSER / BUILD GÜVENLİĞİ ---
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://erntysmhwfxkrtegirds.supabase.co';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
+    
+    const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +62,7 @@ export default function LoginPage() {
           </p>
         </div>
         
+        {/* Tarayıcıların "Şifreyi Kaydet" penceresini açması için onSubmit forma bağlı olmalı */}
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
             <div className="p-4 mb-4 text-sm text-red-700 bg-red-50 rounded-xl border border-red-100 font-medium">
@@ -79,7 +79,7 @@ export default function LoginPage() {
                 id="email-address"
                 name="email"
                 type="email"
-                autoComplete="email"
+                autoComplete="username" // 🌟 Tarayıcının kullanıcı adını/e-postayı hatırlaması için kritik
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -92,17 +92,37 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
                 Şifre
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none relative block w-full px-4 py-3 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'} // 🌟 Koşula göre input tipini değiştiriyoruz
+                  autoComplete="current-password" // 🌟 Şifre hatırlama ve doldurma için standart kural
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="appearance-none relative block w-full pl-4 pr-12 py-3 border border-gray-200 placeholder-gray-400 text-gray-900 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm"
+                  placeholder="••••••••"
+                />
+                
+                {/* 🌟 Şifre Göster / Gizle Butonu */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-sm leading-5 text-gray-400 hover:text-gray-600 transition font-semibold"
+                >
+                  {showPassword ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
