@@ -78,7 +78,7 @@ const organizationSchema = {
   name: "EZM OTO",
   description: "Oto yedek parça satış ve katalog",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app",
-  telephone: "+905312084897",
+  telephone: "+905546588556",
   priceRange: "₺",
 };
 
@@ -150,7 +150,7 @@ export default function RootLayout({
                   Soket
                 </Link>
                 <a
-                  href="https://wa.me/905312084897"
+                  href="https://wa.me/905546588556"
                   className="text-xs text-gray-400 hover:text-green-600 transition-colors"
                 >
                   İletişim

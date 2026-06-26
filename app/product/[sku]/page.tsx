@@ -12,7 +12,7 @@ interface ProductPageProps {
 
 // 📦 Sabitler
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
-const WHATSAPP = '905312084897';
+const WHATSAPP = '905546588556';
 
 // 🔧 Yardımcılar
 const getBaseUrl = async () => {
