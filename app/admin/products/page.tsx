@@ -48,22 +48,27 @@ export default function ProductsPage() {
     loadProducts(0, true);
   }, [search, catFilter, statusFilter]);
 
-  const loadProducts = async (pageNum: number, reset = false) => {
+const loadProducts = async (pageNum: number, reset = false) => {
+    // .order() kısmını "sku" olarak güncelledik (A'dan Z'ye sıralama için ascending: true)
     let query = supabase.from("products").select(`
       *, categories(id, name), product_codes(id, code_value, code_type), product_vehicles(id, brands(name))
-    `, { count: "exact" }).order("created_at", { ascending: false });
+    `, { count: "exact" }).order("sku", { ascending: true });
 
     if (search) query = query.or(`title.ilike.%${search}%,sku.ilike.%${search}%`);
     if (catFilter) query = query.eq("category_id", catFilter);
     if (statusFilter === "active") query = query.eq("is_active", true);
     if (statusFilter === "passive") query = query.eq("is_active", false);
 
-    const start = reset ? 0 : pageNum * PAGE_SIZE;
-    const { data, count } = await query.range(start, (reset ? pageNum + 1 : pageNum + 1) * PAGE_SIZE - 1);
+    // Eğer reset true ise sıfırıncı sayfadan başla, değilse gelen pageNum'ı kullan
+    const currentPage = reset ? 0 : pageNum;
+    const start = currentPage * PAGE_SIZE;
+    const end = (currentPage + 1) * PAGE_SIZE - 1;
+
+    const { data, count } = await query.range(start, end);
 
     setProducts(prev => reset ? (data || []) : [...prev, ...(data || [])]);
     setTotalCount(count || 0);
-    setHasMore(((reset ? pageNum : pageNum) + 1) * PAGE_SIZE < (count || 0));
+    setHasMore((currentPage + 1) * PAGE_SIZE < (count || 0));
 
     if (reset && data?.length) {
       const savedScroll = storage.get("p_scroll");

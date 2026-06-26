@@ -80,17 +80,24 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   }
 
   // Paralel sorgular
-  const [subRes, prodRes, parentRes] = await Promise.all([
-    supabase.from('categories').select('id, name, slug').eq('parent_id', category.id).order('name'),
-    supabase.from('products')
-      .select('id, sku, title, image_url, pin_count, is_new, category_id, product_codes(code_value, code_type), product_vehicles(brands(name))')
-      .eq('category_id', category.id)
-      .eq('is_active', true)
-      .order('id'),
-    category.parent_id 
-      ? supabase.from('categories').select('id, name, slug').eq('id', category.parent_id).maybeSingle()
-      : Promise.resolve({ data: null })
-  ]);
+const [subRes, prodRes, parentRes] = await Promise.all([
+  supabase.from('categories').select('id, name, slug').eq('parent_id', category.id).order('name'),
+  
+  supabase.from('products')
+    .select('id, sku, title, image_url, pin_count, is_new, category_id, product_codes(code_value, code_type), product_vehicles(brands(name))')
+    .eq('category_id', category.id)
+    .eq('is_active', true)
+    // 1. Son ihtimal olarak SKU koduna göre sırala
+    .order('sku', { ascending: true })
+    // 2. Eğer sort_order eşitse (örn hepsi 0 ise), "Yeni Ürün" etiketli olanları üste çıkart
+    .order('is_new', { ascending: false })
+    // 3. Hala eşitlik varsa, alfabetik ürün başlığına göre diz
+    .order('title', { ascending: true }),
+
+  category.parent_id 
+    ? supabase.from('categories').select('id, name, slug').eq('id', category.parent_id).maybeSingle()
+    : Promise.resolve({ data: null })
+]);
 
   const products = (prodRes.data || []).map(normalizeProduct);
   const subCategories = subRes.data || [];
