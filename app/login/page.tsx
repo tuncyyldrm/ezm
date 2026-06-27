@@ -1,24 +1,19 @@
-// app/login/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
+// Ortak tasarladığımız ve çerezleri yöneten supabase istemcisini çağırıyoruz
+import { supabase } from '@/lib/supabase'; 
 
 export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // 🌟 Şifre görünürlük durumu
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-    // --- BROWSER / BUILD GÜVENLİĞİ ---
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://erntysmhwfxkrtegirds.supabase.co';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
-    
-    const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +21,8 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      // 1. Giriş isteği (Oturum başarılı olursa ortak istemci çerezleri otomatik yazar)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -35,12 +31,14 @@ export default function LoginPage() {
         throw new Error('Giriş bilgileri hatalı veya yetkiniz yok.');
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
+      // 2. Performans İyileştirmesi: Tekrar getUser() çağırmak yerine gelen veriyi kullanıyoruz
+      const user = authData?.user;
       if (user?.user_metadata?.role !== 'admin') {
         await supabase.auth.signOut();
         throw new Error('Bu panele erişim yetkiniz bulunmamaktadır.');
       }
 
+      // 3. Güvenli Yönlendirme Sıralaması
       router.push('/admin');
       router.refresh();
     } catch (err: any) {
@@ -62,7 +60,6 @@ export default function LoginPage() {
           </p>
         </div>
         
-        {/* Tarayıcıların "Şifreyi Kaydet" penceresini açması için onSubmit forma bağlı olmalı */}
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           {error && (
             <div className="p-4 mb-4 text-sm text-red-700 bg-red-50 rounded-xl border border-red-100 font-medium">
@@ -79,7 +76,7 @@ export default function LoginPage() {
                 id="email-address"
                 name="email"
                 type="email"
-                autoComplete="username" // 🌟 Tarayıcının kullanıcı adını/e-postayı hatırlaması için kritik
+                autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -96,8 +93,8 @@ export default function LoginPage() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'} // 🌟 Koşula göre input tipini değiştiriyoruz
-                  autoComplete="current-password" // 🌟 Şifre hatırlama ve doldurma için standart kural
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -105,7 +102,6 @@ export default function LoginPage() {
                   placeholder="••••••••"
                 />
                 
-                {/* 🌟 Şifre Göster / Gizle Butonu */}
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}

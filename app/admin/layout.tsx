@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+// Güncellediğimiz ortak supabase istemcisini import ediyoruz
+import { supabase } from "@/lib/supabase"; 
 
 const menuItems = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
@@ -20,9 +21,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    try {
+      // Artık çerezleri temizleyen doğru istemci metodu tetikleniyor
+      await supabase.auth.signOut();
+      
+      // Önce yönlendir, ardından router'ı yenileyerek Next.js middleware/state yapısını sıfırla
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Çıkış işlemi sırasında bir hata oluştu:", error);
+    }
   };
 
   return (
@@ -30,7 +38,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* MOBIL HEADER (Sadece mobilde görünür) */}
       <div className="lg:hidden flex items-center justify-between p-4 bg-slate-950 text-white w-full fixed top-0 z-50">
         <span className="font-bold">Admin Panel</span>
-        <button onClick={() => setIsOpen(!isOpen)} className="text-2xl">
+        <button type="button" onClick={() => setIsOpen(!isOpen)} className="text-2xl">
           {isOpen ? "✕" : "☰"}
         </button>
       </div>
@@ -51,8 +59,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="pt-4 border-t border-slate-900 mt-auto space-y-1">
-          <button onClick={handleLogout} className="w-full text-left text-red-400 p-4 hover:bg-red-950/30 rounded-xl">❌ Çıkış</button>
-          <Link href="/" className="block p-4 text-slate-500 hover:text-slate-200">← Mağaza</Link>
+          {/* type="button" eklenerek form dışı buton davranışı kesinleştirildi */}
+          <button 
+            type="button" 
+            onClick={handleLogout} 
+            className="w-full text-left text-red-400 p-4 hover:bg-red-950/30 rounded-xl transition-colors font-semibold"
+          >
+            ❌ Çıkış
+          </button>
+          <Link href="/" className="block p-4 text-slate-500 hover:text-slate-200 transition-colors">
+            ← Mağaza
+          </Link>
         </div>
       </aside>
 

@@ -1,28 +1,27 @@
+// middleware.ts
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // 🌟 1. ADIM: Güvenli değişken kontrolü (Build ve Runtime koruması)
-// middleware.ts dosyasının en üstündeki o satırları şununla değiştir:
-const supabaseUrl = 
-  process.env.SUPABASE_URL || 
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 
-  'https://placeholder-project.supabase.co';
+  const supabaseUrl = 
+    process.env.SUPABASE_URL || 
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 
+    'https://erntysmhwfxkrtegirds.supabase.co'; // Kendi URL'iniz yedek olarak kalabilir
 
-const supabaseAnonKey = 
-  process.env.SUPABASE_ANON_KEY || 
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
+  const supabaseAnonKey = 
+    process.env.SUPABASE_ANON_KEY || 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
 
-  // İlk başta boş bir response oluşturuyoruz
+  // 1. İlk yanıt nesnesini oluşturuyoruz
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
-  // Supabase sunucu istemcisini oluşturuyoruz
+  // 2. Supabase sunucu istemcisini güvenli çerez yönetimiyle başlatıyoruz
   const supabase = createServerClient(
     supabaseUrl,
     supabaseAnonKey,
@@ -32,13 +31,10 @@ const supabaseAnonKey =
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          // Next.js 16+ uyumluluğu için çerezleri hem request hem response'a güvenli şekilde dağıtıyoruz
+          // Çerezleri hem isteğe hem yanıta güvenli bir şekilde mutasyona uğratarak dağıtıyoruz
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
+          
+          // Mevcut response nesnesini koruyarak çerezleri üzerine yazıyoruz (Sıfırlama yapmıyoruz)
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -47,36 +43,40 @@ const supabaseAnonKey =
     }
   );
 
-  // Sahte link aktifse (yani Vercel değişkenleri henüz bağlamadıysa) middleware'i güvenle bypass et
-  if (supabaseUrl.includes('placeholder-project')) {
-    return response;
-  }
-
-  // 🌟 Kullanıcı kontrolü
+  // 3. Kullanıcı kontrolü (Bu metot arka planda token süresi bittiyse otomatik refresh tetikler ve setAll çalışır)
   const { data: { user } } = await supabase.auth.getUser();
+  const { pathname } = request.nextUrl;
 
-  // Eğer kullanıcı /admin sayfalarına erişmeye çalışıyorsa
-  if (request.nextUrl.pathname.startsWith('/admin')) {
+  // 4. ADMIN PANELİ KORUMASI
+  if (pathname.startsWith('/admin')) {
     
-    // 1. Durum: Kullanıcı giriş yapmamışsa login sayfasına at
+    // Durum A: Kullanıcı oturum açmamış
     if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const loginUrl = new URL('/login', request.url);
+      // Kullanıcıyı yönlendirirken güncellenmiş çerezleri (varsa) kaybetmemek için response.cookies'i klonluyoruz
+      return NextResponse.redirect(loginUrl, { headers: response.headers });
     }
 
-    // 2. Durum: Giriş yapmış ama "admin" rolü yoksa login'e postala
+    // Durum B: Oturum var ama admin rolü yok
     const userRole = user.user_metadata?.role;
     if (userRole !== 'admin') {
-      return NextResponse.redirect(new URL('/login?error=yetkisiz', request.url));
+      const unauthorizedUrl = new URL('/login?error=yetkisiz', request.url);
+      return NextResponse.redirect(unauthorizedUrl, { headers: response.headers });
     }
+  }
+
+  // 5. ZATEN GİRİŞ YAPMIŞ ADMİNİ /LOGIN SAYFASINDAN /ADMIN'E LOGİN DÖNGÜSÜNDEN KURTARMA
+  if (pathname === '/login' && user && user.user_metadata?.role === 'admin') {
+    return NextResponse.redirect(new URL('/admin', request.url), { headers: response.headers });
   }
 
   return response;
 }
 
 export const config = {
-  // Middleware'in gereksiz yere statik varlıklarda çalışıp sunucuyu yormasını engelliyoruz
+  // Middleware'in sadece admin sayfalarında ve login ekranında çalışmasını sağlayarak performansı optimize ediyoruz
   matcher: [
     '/admin/:path*',
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/login'
   ],
 };

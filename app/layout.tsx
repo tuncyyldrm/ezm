@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "EZM OTO - Oto Yedek Parça Kataloğu",
+    default: "EZM OTO - Yedek Parça Kataloğu",
     template: "%s | EZM OTO",
   },
   description: "Oto yedek parça kataloğu. OEM numaraları, uyumlu araçlar ve detaylı ürün bilgileri. WhatsApp ile hızlı sipariş.",
@@ -40,14 +40,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "tr_TR",
     siteName: "EZM OTO",
-    title: "EZM OTO - Oto Yedek Parça Kataloğu",
+    title: "EZM OTO - Yedek Parça Kataloğu",
     description: "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
     images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "EZM OTO" }],
   },
   
   twitter: {
     card: "summary_large_image",
-    title: "EZM OTO - Oto Yedek Parça Kataloğu",
+    title: "EZM OTO - Yedek Parça Kataloğu",
     description: "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
     images: ["/og-image.jpg"],
   },

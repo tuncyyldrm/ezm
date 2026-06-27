@@ -7,10 +7,10 @@ import type { Metadata } from 'next';
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: 'EZM OTO - Oto Yedek Parça Kataloğu',
+  title: 'EZM OTO - Yedek Parça Kataloğu',
   description: 'OEM ve muadil oto yedek parçalar. Geniş ürün yelpazesi, özel fiyatlar ve hızlı teslimat.',
   openGraph: {
-    title: 'EZM OTO - Oto Yedek Parça Kataloğu',
+    title: 'EZM OTO - Yedek Parça Kataloğu',
     description: 'OEM ve muadil oto yedek parçalar. Geniş ürün yelpazesi, özel fiyatlar.',
     type: 'website',
   },

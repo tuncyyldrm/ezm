@@ -1,15 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
+// @/lib/supabase.ts
+import { createBrowserClient } from '@supabase/ssr'; // 🌟 Değişen kısım
 
 // --- BROWSER / BUILD GÜVENLİĞİ ---
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://erntysmhwfxkrtegirds.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
 
-// --- BAĞLANTI ---
-const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  { auth: { persistSession: false } }
-);
+// --- BAĞLANTI (Çerez ve Oturum Yönetimli Modern Yapı) ---
+const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey); // 🌟 Değişen kısım
 
 export { supabase };
 
@@ -71,7 +68,7 @@ const storage = {
       .from('product-images' as Bucket)
       .upload(path, file, { cacheControl: '3600', upsert: true });
     if (error) throw error;
-    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
+    return `${supabaseUrl}/storage/v1/object/public/product-images/${path}`;
   },
   
   delete: async (url: string) => {
@@ -163,9 +160,6 @@ export const productService = {
     await db.delete('products', id);
   }
 };
-
-// --- KATEGORİ VE MARKA SERVİSLERİ ---
-// lib/supabase.ts - SADECE DEĞİŞEN KISIMLAR
 
 // --- KATEGORİ SERVİSİ ---
 export const categoryService = {

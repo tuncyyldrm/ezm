@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     return { title: 'Kategori Bulunamadı', robots: { index: false } };
   }
 
-  const title = `${category.name} Yedek Parça | EZM OTO`;
+  const title = `${category.name} Yedek Parça`;
   const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar. Uyumlu araçlar, detaylı ürün bilgileri. Hemen keşfedin.`;
 
   return {

@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   const oems = filterCodes((p as any).product_codes, 'OEM');
   const img = `${STORAGE_URL}/${p.sku}.jpg`;
-  const title = `${p.sku} - ${p.title} | EZM OTO`;
+  const title = `${p.sku} - ${p.title}`;
   const desc = `${p.title}. ${p.pin_count || 0} PIN. OEM: ${oems.join(', ')}. Hızlı teslimat.`;
 
   return {
