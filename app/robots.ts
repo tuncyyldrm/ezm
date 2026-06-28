@@ -5,12 +5,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: [
-        '/admin',   // Yönetim panelini taramaya kapatıyoruz
-        '/login'    // İsteğe bağlı: Kullanıcı giriş sayfasını da arama sonuçlarında gizlemek isteyebilirsiniz
-      ], 
+      disallow: ['/admin', '/login'], 
     },
-    // Sitemap URL'ini projenizin aktif adresiyle eşitledik
-    sitemap: 'https://ezmoto.vercel.app/sitemap.xml',
+    // .xml uzantısı zorunlu değildir. Google bu rotayı doğrudan tarayabilir.
+    sitemap: 'https://ezmoto.vercel.app/sitemap',
   };
 }

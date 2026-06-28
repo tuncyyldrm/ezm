@@ -74,9 +74,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Middleware'in sadece admin sayfalarında ve login ekranında çalışmasını sağlayarak performansı optimize ediyoruz
+  // sitemap.xml yerine sitemap olarak güncellendi
   matcher: [
-    '/admin/:path*',
-    '/login'
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap|robots.txt).*)',
   ],
 };
