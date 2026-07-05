@@ -1,12 +1,12 @@
 import { MetadataRoute } from 'next';
 import { categoryService, supabase } from '@/lib/supabase';
 
-export const revalidate = 21600; // 6 saat cache
+// Cache süresini 24 saate çıkararak Vercel zaman aşımı riskini ve Supabase yükünü azaltıyoruz
+export const revalidate = 86400; 
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://ezmoto.vercel.app';
 
-  // 1. Statik Rotalar (Engellenen /login kaldırıldı)
   const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
@@ -22,34 +22,34 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const categoryRoutes: MetadataRoute.Sitemap = (categories || [])
       .filter((category) => category.slug)
       .map((category) => ({
-        url: `${baseUrl}/${category.slug}`,
+        url: `${baseUrl}/${category.slug.toLowerCase()}`,
         lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),
         changeFrequency: 'weekly',
         priority: 0.8,
       }));
 
-    // 3. Ürünleri Çek ve Formatla (İlk 2500 ürün)
+    // 3. Ürünleri Çek ve Formatla (Sadece aktif olanları çekerek filtreleme yükünü DB'ye yıkıyoruz)
     const { data: products, error } = await supabase
       .from('products')
-      .select('sku, is_active, created_at')
+      .select('sku, created_at')
+      .eq('is_active', true) // Filtrelemeyi burada yapmak performansı uçurur
       .range(0, 9499);
 
     if (error) throw error;
 
     const productRoutes: MetadataRoute.Sitemap = (products || [])
-      .filter((product) => product.sku && product.is_active !== false)
+      .filter((product) => product.sku)
       .map((product) => ({
-        url: `${baseUrl}/product/${product.sku}`,
+        url: `${baseUrl}/product/${product.sku.toLowerCase()}`, // URL standartı için lowercase
         lastModified: product.created_at ? new Date(product.created_at) : new Date(),
-        changeFrequency: 'daily',
-        priority: 0.9,
+        changeFrequency: 'weekly', // 6600 ürün için haftalık tarama idealdir
+        priority: 0.6, // Tarama bütçesi dengesi için ideal öncelik
       }));
 
     return [...staticRoutes, ...categoryRoutes, ...productRoutes];
 
   } catch (error) {
     console.error('Sitemap üretilirken hata oluştu:', error);
-    // Hata anında sitenin çökmemesi için sadece ana sayfayı güvenli liman olarak dönüyoruz
     return staticRoutes;
   }
 }
