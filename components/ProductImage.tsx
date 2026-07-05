@@ -10,12 +10,12 @@ interface ProductImageProps {
 
 export default function ProductImage({ sku, title, storageUrl }: ProductImageProps) {
   // Cache-breaking ortadan kaldırıldı. Doğrudan temiz statik URL ile başlatıyoruz.
-  const [imgSrc, setImgSrc] = useState(`${storageUrl}/${sku}.png`);
+  const [imgSrc, setImgSrc] = useState(`${storageUrl}/${sku}.jpg`);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setRetryCount(0);
-    setImgSrc(`${storageUrl}/${sku}.png`);
+    setImgSrc(`${storageUrl}/${sku}.jpg`);
   }, [sku, storageUrl]);
 
   const handleError = () => {

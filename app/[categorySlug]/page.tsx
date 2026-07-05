@@ -14,7 +14,6 @@ interface CategoryPageProps {
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.vercel.app';
 
-// 💡 ÇÖZÜM: `headers()` kaldırıldı, sitenin temel URL'i çevre değişkeninden veya güvenli fall-back'ten üretiliyor.
 const getBaseUrl = () => SITE_URL;
 
 const normalizeProduct = (p: any) => ({
@@ -38,6 +37,7 @@ export async function generateStaticParams() {
   }));
 }
 
+// 🚀 WHATSAPP BOTUNA KATEGORİNİN RESMİNİ EKSİKSİZ GÖSTEREN KISIM
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { categorySlug: slug } = await params;
   const baseUrl = getBaseUrl();
@@ -53,14 +53,25 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     return { title: 'Kategori Bulunamadı', robots: { index: false } };
   }
 
+  // 🎯 Kategori resminin tam adresi (Uzantısı .png ise alt tarafı .png yapabilirsin)
+  const categoryImage = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.jpg`;
+
   const title = `${category.name} Yedek Parça`;
   const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar. Uyumlu araçlar ve detaylı ürün kodları.`;
 
   return {
     title,
     description,
-    openGraph: { title, description, url: currentUrl, siteName: 'EZM OTO', locale: 'tr_TR', type: 'website' },
-    twitter: { card: 'summary_large_image', title, description },
+    openGraph: { 
+      title, 
+      description, 
+      url: currentUrl, 
+      siteName: 'EZM OTO', 
+      locale: 'tr_TR', 
+      type: 'website',
+      images: [{ url: categoryImage, width: 1200, height: 630, alt: title }] // Bot resmi buradan vurup alacak
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [categoryImage] },
     alternates: { canonical: currentUrl },
     robots: { index: true, follow: true },
     keywords: `${category.name}, oto yedek parça, OEM, araba parçası`,
@@ -143,6 +154,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Breadcrumb */}
         <nav className="mb-6 text-sm" aria-label="Breadcrumb">
           <ol className="flex items-center flex-wrap gap-x-1 gap-y-0.5 text-gray-500">
             <li><Link href="/" className="hover:text-blue-600">Ana Sayfa</Link></li>
@@ -159,6 +171,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           </ol>
         </nav>
 
+        {/* Header */}
         <header className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             {category.name} Yedek Parçaları
@@ -168,6 +181,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           </p>
         </header>
 
+        {/* Alt Kategoriler */}
         {subCategories.length > 0 && (
           <nav className="mb-8" aria-label="Alt kategoriler">
             <h2 className="text-xs font-bold text-gray-400 uppercase mb-3">
@@ -187,6 +201,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           </nav>
         )}
 
+        {/* Ürün Listesi */}
         <section aria-label={`${category.name} ürünleri`}>
           <CategoryClient categoryName={category.name} products={products} />
         </section>

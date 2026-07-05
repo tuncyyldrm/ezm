@@ -42,14 +42,14 @@ export const metadata: Metadata = {
     siteName: "EZM OTO",
     title: "EZM OTO - Yedek Parça Kataloğu",
     description: "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
-    images: [{ url: "/og-image.jpg", width: 1200, height: 630, alt: "EZM OTO" }],
+    images: [{ url: "/android-chrome-512x512.png", width: 1200, height: 630, alt: "EZM OTO" }],
   },
   
   twitter: {
     card: "summary_large_image",
     title: "EZM OTO - Yedek Parça Kataloğu",
     description: "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
-    images: ["/og-image.jpg"],
+    images: ["/android-chrome-512x512.png"],
   },
   
   robots: {
@@ -81,7 +81,7 @@ const globalStoreSchema = {
   "url": process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app",
   "telephone": "+905546588556",
   "priceRange": "₺",
-  "image": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/og-image.jpg`,
+  "image": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/android-chrome-512x512.png`,
   "address": {
     "@type": "PostalAddress",
     "streetAddress": "Yedek Parça Sanayi Sitesi", // 💡 Örnek adres alanları Google uyarılarını kapatır

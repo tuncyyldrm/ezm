@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
-import { headers } from 'next/headers';
 import ProductImage from '@/components/ProductImage';
 import SocketImage from '@/components/SocketImage';
 import Link from 'next/link';
@@ -10,14 +9,11 @@ interface ProductPageProps {
   params: Promise<{ sku: string }>;
 }
 
+// 💡 RESİM UZANTIN NEYSE BURADAN DEĞİŞTİR ('jpg' veya 'png')
+const IMAGE_EXTENSION = 'jpg'; 
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
 const WHATSAPP = '905546588556';
-
-const getBaseUrl = async () => {
-  const heads = await headers();
-  const host = heads.get('host') || 'localhost:3000';
-  return `${host.startsWith('localhost') ? 'http' : 'https'}://${host}`;
-};
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.vercel.app';
 
 const filterCodes = (codes: any[], type: string) =>
   (codes || []).filter(c => c.code_type === type).map(c => c.code_value);
@@ -28,12 +24,11 @@ const uniqueVehicles = (vehicles: any[]) =>
 const whatsappMsg = (sku: string, title: string, pin: number, url: string) =>
   `Merhaba,\n${sku} - ${title} hakkında bilgi almak istiyorum.${pin > 0 ? ` (${pin} PIN)` : ''}\n\n${url}`;
 
-// 🏷️ SEO & METADATA GÜÇLENDİRİLDİ
+// 🚀 WHATSAPP BOTUNA RESMİ EKSİKSİZ GÖSTEREN KISIM
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { sku } = await params;
   const decoded = decodeURIComponent(sku);
-  const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}/product/${sku}`;
+  const url = `${SITE_URL}/product/${encodeURIComponent(sku)}`;
 
   const { data: p } = await supabase
     .from('products')
@@ -47,16 +42,23 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const oems = filterCodes((p as any).product_codes, 'OEM');
   const kategoriAdi = (p as any).categories?.name || 'Oto Yedek Parça';
   
-  // Görsel eşleşme riskini azaltmak için fallback'li yapılandırma yerine güvenli olan .png/jpeg kontrolü 
-  // (Gerçek üretimde veritabanında uzantı tutmak en doğrusudur, şimdilik varsayılan png kabul edildi)
-  const img = `${STORAGE_URL}/${p.sku}.png`; 
+  // Ürünün tam resim linki oluşturuluyor
+  const img = `${STORAGE_URL}/${p.sku}.${IMAGE_EXTENSION}`; 
   const title = `${p.sku} ${p.title} - ${kategoriAdi} | EZM OTO`;
-  const desc = `${p.sku} SKU kodlu ${p.title} yedek parça. ${p.pin_count ? `${p.pin_count} PIN soket yapısına sahiptir.` : ''} ${oems.length > 0 ? `OEM Kodları: ${oems.slice(0, 5).join(', ')}.` : ''} Uyumlu modeller ve detaylar için tıklayın.`;
+  const desc = `${p.sku} SKU kodlu ${p.title} yedek parça. ${p.pin_count ? `${p.pin_count} PIN soket yapısına sahiptir.` : ''}`;
 
   return {
     title,
     description: desc,
-    openGraph: { title, description: desc, url, siteName: 'EZM OTO', images: [{ url: img, width: 800, height: 600, alt: title }], locale: 'tr_TR', type: 'website' },
+    openGraph: { 
+      title, 
+      description: desc, 
+      url, 
+      siteName: 'EZM OTO', 
+      locale: 'tr_TR', 
+      type: 'article',
+      images: [{ url: img, width: 800, height: 800, alt: title }] // Bot resmi buradan vurup alacak
+    },
     twitter: { card: 'summary_large_image', title, description: desc, images: [img] },
     alternates: { canonical: url },
     robots: { index: true, follow: true },
@@ -67,8 +69,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 export default async function ProductDetailPage({ params }: ProductPageProps) {
   const { sku } = await params;
   const decoded = decodeURIComponent(sku);
-  const baseUrl = await getBaseUrl();
-  const url = `${baseUrl}/product/${sku}`;
+  const url = `${SITE_URL}/product/${encodeURIComponent(sku)}`;
 
   const { data: product, error } = await supabase
     .from('products')
@@ -83,10 +84,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const oems = filterCodes(p.product_codes, 'OEM');
   const muadils = filterCodes(p.product_codes, 'MUADIL');
   const vehicles = uniqueVehicles(p.product_vehicles);
-  const img = `${STORAGE_URL}/${p.sku}.png`;
+  const img = `${STORAGE_URL}/${p.sku}.${IMAGE_EXTENSION}`;
   const whatsapp = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(whatsappMsg(p.sku, p.title, p.pin_count || 0, url))}`;
 
-  // Yapılandırılmış Veri (Schema.org) - Google standartlarına optimize edildi
   const schema = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -98,17 +98,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         description: `${p.title} - EZM OTO Güvencesiyle Kaliteli Oto Yedek Parça çözümleri.`,
         category: p.categories?.name,
         brand: { '@type': 'Brand', name: 'EZM OTO' },
-        ...(oems.length > 0 && { mpn: oems[0], identifier: oems.map((o: string) => ({ '@type': 'PropertyValue', name: 'OEM', value: o })) }),
-        ...(p.pin_count > 0 && { additionalProperty: { '@type': 'PropertyValue', name: 'PIN Sayısı', value: p.pin_count } }),
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'TRY', availability: 'https://schema.org/InStock', url: url, seller: { '@type': 'Organization', name: 'EZM OTO' } }
-      },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Ana Sayfa', item: baseUrl },
-          { '@type': 'ListItem', position: 2, name: p.categories?.name || 'Ürünler', item: p.categories ? `${baseUrl}/${p.categories.slug}` : `${baseUrl}/urunler` },
-          { '@type': 'ListItem', position: 3, name: p.sku, item: url }
-        ]
       }
     ]
   };
@@ -140,7 +130,6 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               {p.is_new && <span className="absolute top-4 left-4 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">YENİ ÜRÜN</span>}
               
               <div className="w-full flex-1 flex items-center justify-center min-h-[280px]">
-                {/* Alt etiketi Google görsel aramaları için optimize edildi */}
                 <ProductImage sku={p.sku} title={`${p.sku} - ${p.title} ${p.categories?.name || ''}`} storageUrl={STORAGE_URL} />
               </div>
 
@@ -165,9 +154,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
               <h2 className="text-xl font-semibold text-gray-800 mb-2">{p.title}</h2>
               
-              {/* Botların sektörel bağ kurması için semantik ek açıklama metni */}
               <p className="text-sm text-gray-600 mb-4 font-normal">
-                <strong>{p.sku}</strong> referans numaralı bu ürün, yüksek kalite standartlarında üretilmiş bir <strong>{p.categories?.name || 'oto yedek parça'}</strong> ürünüdür.
+                <strong>{p.sku}</strong> referans numaralı bu unit, yüksek kalite standartlarında üretilmiş bir <strong>{p.categories?.name || 'oto yedek parça'}</strong> ürünüdür.
               </p>
 
               {p.categories && (
@@ -182,11 +170,10 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                   <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
                     <span className="w-1 h-4 bg-purple-500 rounded-full" /> Muadil ve Bağlı Ürün Kodları ({muadils.length})
                   </h3>
-                  {/* Botların okuyabilmesi için görünmez/erişilebilir düz metin listesi eklendi */}
                   <span className="sr-only">{muadils.join(', ')}</span>
                   <div className="flex flex-wrap gap-2">
                     {muadils.map((code: string, i: number) => (
-                      <SocketImage key={i} src={`${STORAGE_URL}/${code}.jpg`} alt={`${code} muadil yedek parça soketi`} socketCode={code} />
+                      <SocketImage key={i} src={`${STORAGE_URL}/${code}.${IMAGE_EXTENSION}`} alt={`${code} muadil yedek parça soketi`} socketCode={code} />
                     ))}
                   </div>
                 </div>
