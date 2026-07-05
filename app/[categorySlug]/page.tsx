@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
   // 🎯 BURASI BARKOD GİBİ NET OLMALI:
   // Çözdüğün uzantı hangisiyse (.png veya .jpg) burayı o uzantıyla tek satır yap bırak.
-  const categoryImage = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.jpg`;
+  const categoryImage = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images/${slug}.png`;
 
   const title = `${category.name} Yedek Parça`;
   const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar.`;
