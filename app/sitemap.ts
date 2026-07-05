@@ -32,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const { data: products, error } = await supabase
       .from('products')
       .select('sku, is_active, created_at')
-      .range(0, 2499);
+      .range(0, 9499);
 
     if (error) throw error;
 
