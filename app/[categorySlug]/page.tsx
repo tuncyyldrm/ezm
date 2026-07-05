@@ -53,9 +53,10 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     return { title: 'Kategori Bulunamadı', robots: { index: false } };
   }
 
-  // 🎯 ÇÖZÜM: Hem .jpg hem .JPG versiyonlarını hazırlayıp bota alternatif sunuyoruz
+  // 🎯 KATEGORİ İÇİN HEDEFLENEBİLECEK TÜM OLASI UZANTILAR
   const categoryImageJpg = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.jpg?ver=v1.0.2`;
   const categoryImageJpgUpper = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.JPG?ver=v1.0.2`;
+  const categoryImagePng = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.png?ver=v1.0.2`;
 
   const title = `${category.name} Yedek Parça`;
   const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar. Uyumlu araçlar ve detaylı ürün kodları.`;
@@ -70,16 +71,18 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       siteName: 'EZM OTO', 
       locale: 'tr_TR', 
       type: 'website',
+      // 🎯 ÇÖZÜM: Bot ilk sıradakini tarar, bulamazsa listedeki diğer uzantılara (PNG dahil) düşer.
       images: [
         { url: categoryImageJpg, width: 1200, height: 630, alt: title },
-        { url: categoryImageJpgUpper, width: 1200, height: 630, alt: title }
-      ] // Bot ilkini bulamazsa ikincisini havada yakalar
+        { url: categoryImageJpgUpper, width: 1200, height: 630, alt: title },
+        { url: categoryImagePng, width: 1200, height: 630, alt: title }
+      ]
     },
     twitter: { 
       card: 'summary_large_image', 
       title, 
       description, 
-      images: [categoryImageJpg, categoryImageJpgUpper] 
+      images: [categoryImageJpg, categoryImageJpgUpper, categoryImagePng] 
     },
     alternates: { canonical: currentUrl },
     robots: { index: true, follow: true },
