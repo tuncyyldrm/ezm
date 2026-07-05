@@ -49,9 +49,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
 
   if (!category) return { title: 'Kategori Bulunamadı' };
 
-  // 🎯 BURASI BARKOD GİBİ NET OLMALI:
-  // Çözdüğün uzantı hangisiyse (.png veya .jpg) burayı o uzantıyla tek satır yap bırak.
-  const categoryImage = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images/${slug}.png`;
+  const categoryImage = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images/${slug}.jpg`;
 
   const title = `${category.name} Yedek Parça`;
   const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar.`;
