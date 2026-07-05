@@ -37,29 +37,24 @@ export async function generateStaticParams() {
   }));
 }
 
-// 🚀 SOSYAL MEDYA VE WHATSAPP BOTLARINA KATEGORİ GÖRSELİNİ GARANTİLİ GÖNDEREN KISIM
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { categorySlug: slug } = await params;
-  const baseUrl = getBaseUrl();
-  const currentUrl = `${baseUrl}/${slug}`;
+  const currentUrl = `${SITE_URL}/${slug}`;
   
   const { data: category } = await supabase
     .from('categories')
-    .select('id, name')
+    .select('name')
     .eq('slug', slug)
     .maybeSingle();
 
-  if (!category) {
-    return { title: 'Kategori Bulunamadı', robots: { index: false } };
-  }
+  if (!category) return { title: 'Kategori Bulunamadı' };
 
-  // 🎯 KATEGORİ İÇİN HEDEFLENEBİLECEK TÜM OLASI UZANTILAR
-  const categoryImageJpg = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.jpg?ver=v1.0.2`;
-  const categoryImageJpgUpper = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.JPG?ver=v1.0.2`;
-  const categoryImagePng = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.png?ver=v1.0.2`;
+  // 🎯 BURASI BARKOD GİBİ NET OLMALI:
+  // Çözdüğün uzantı hangisiyse (.png veya .jpg) burayı o uzantıyla tek satır yap bırak.
+  const categoryImage = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.jpg`;
 
   const title = `${category.name} Yedek Parça`;
-  const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar. Uyumlu araçlar ve detaylı ürün kodları.`;
+  const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar.`;
 
   return {
     title,
@@ -69,27 +64,12 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       description, 
       url: currentUrl, 
       siteName: 'EZM OTO', 
-      locale: 'tr_TR', 
       type: 'website',
-      // 🎯 ÇÖZÜM: Bot ilk sıradakini tarar, bulamazsa listedeki diğer uzantılara (PNG dahil) düşer.
-      images: [
-        { url: categoryImageJpg, width: 1200, height: 630, alt: title },
-        { url: categoryImageJpgUpper, width: 1200, height: 630, alt: title },
-        { url: categoryImagePng, width: 1200, height: 630, alt: title }
-      ]
+      images: [{ url: categoryImage }] // WhatsApp doğrudan bu adrese vuracak
     },
-    twitter: { 
-      card: 'summary_large_image', 
-      title, 
-      description, 
-      images: [categoryImageJpg, categoryImageJpgUpper, categoryImagePng] 
-    },
-    alternates: { canonical: currentUrl },
-    robots: { index: true, follow: true },
-    keywords: `${category.name}, oto yedek parça, OEM, araba parçası`,
+    twitter: { card: 'summary_large_image', title, description, images: [categoryImage] },
   };
 }
-
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { categorySlug: slug } = await params;
   const baseUrl = getBaseUrl();
