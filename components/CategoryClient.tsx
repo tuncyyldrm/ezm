@@ -122,7 +122,7 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
             </span>
             <input
               type="text"
-              placeholder="Üretici kodu, OEM no veya parça adını yazın (örn: 46-0001...)"
+              placeholder="Üretici kodu, OEM no veya parça adını yazın"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               className="w-full pl-12 pr-16 py-4 rounded-xl text-sm font-medium outline-none shadow-inner border border-transparent focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all"
