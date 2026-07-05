@@ -15,23 +15,23 @@ export default function ProductCard({ product }: ProductCardProps) {
   const oems = codes.filter((c: any) => c?.code_type === 'OEM').map((c: any) => c.code_value);
   const sockets = codes.filter((c: any) => c?.code_type === 'MUADIL').map((c: any) => c.code_value);
   const pin = product?.pin_count || 0;
-  const isNew = product?.is_new; // 👈 Yeni özelliğini buradan çekiyoruz
+  const isNew = product?.is_new;
+
+  const productUrl = `/product/${encodeURIComponent(product.sku)}`;
+  const seoTitle = `${product.sku} - ${product.title} Oto Yedek Parça`;
 
   return (
-    // 🌟 Karta "relative" sınıfı eklendi ki absolute olan yeni rozeti düzgün konumlanabilsin
-    <div className="relative bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group">
+    <article className="relative bg-white border border-gray-100 rounded-2xl p-4 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group">
       
-      {/* 🌟 YENİ ROZETİ ENTEGRASYONU */}
       {isNew && (
         <span className="absolute top-4 left-4 z-10 bg-green-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-sm pointer-events-none uppercase tracking-wider">
-          YENİ
+          YENİ ÜRÜN
         </span>
       )}
 
-      {/* Ürün Görseli */}
-      <Link href={`/product/${encodeURIComponent(product.sku)}`} className="block">
+      <Link href={productUrl} className="block" title={`${seoTitle} Detayları`}>
         <div className="relative h-40 flex items-center justify-center bg-white-50 rounded-xl mb-3 overflow-hidden group-hover:scale-[1.02] transition-transform">
-          <ProductImage sku={product.sku} title={product.title} storageUrl={STORAGE} />
+          <ProductImage sku={product.sku} title={`${product.sku} yedek parça soket görseli`} storageUrl={STORAGE} />
           {pin > 0 && (
             <span className="absolute top-2 right-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
               {pin} PIN
@@ -40,17 +40,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
       </Link>
 
-      {/* Ürün Bilgisi */}
-      <Link href={`/product/${encodeURIComponent(product.sku)}`} className="block mb-3">
-        <h3 className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors">
-          {product.sku}
+      <Link href={productUrl} className="block mb-3">
+        <h3 className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors font-mono">
+          <span className="sr-only">Ürün Kodu: </span>{product.sku}
         </h3>
-        <p className="text-xs text-gray-500 line-clamp-2 mt-1" title={product.title}>
+        <h4 className="text-xs text-gray-500 line-clamp-2 mt-1 font-normal" title={product.title}>
           {product.title}
-        </p>
+        </h4>
       </Link>
 
-      {/* Kodlar */}
       <div className="border-t border-gray-50 pt-2 space-y-2">
         {oems.length > 0 && (
           <div className="text-[11px] text-gray-400 font-mono truncate" title={oems.join(', ')}>
@@ -62,6 +60,8 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {sockets.length > 0 && (
           <div>
+            <span className="sr-only">Muadil Parça Kodları: {sockets.join(', ')}</span>
+            
             <div className="flex flex-wrap gap-1.5">
               {sockets.slice(0, 4).map((code: string, i: number) => (
                 <SocketChip key={i} code={code} />
@@ -74,14 +74,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         )}
 
         {!oems.length && !sockets.length && (
-          <div className="text-[11px] text-gray-300 italic">Kod yok</div>
+          <div className="text-[11px] text-gray-300 italic">Referans kodu bulunmuyor</div>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
-// Basit Socket Chip - Hover'da resim gösterir
 function SocketChip({ code }: { code: string }) {
   const [show, setShow] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -105,11 +104,11 @@ function SocketChip({ code }: { code: string }) {
       </span>
 
       {show && (
-        <div className="absolute left-0 bottom-full mb-2 z-50 w-36 bg-white p-2 rounded-xl shadow-xl border border-gray-100">
-          <div className="w-full h-26 bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-36 bg-white p-2 rounded-xl shadow-xl border border-gray-100">
+          <div className="w-full h-26 bg-white-50 rounded-lg flex items-center justify-center overflow-hidden">
             <img
               src={`${STORAGE}/${code}.jpg`}
-              alt={code}
+              alt={`${code} muadil soket parça önizlemesi`}
               className="max-w-full max-h-full object-contain"
               onError={() => setImgError(true)}
             />

@@ -19,22 +19,12 @@ export default function ProductsPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const [search, setSearch] = useState(() => storage.get("p_search") || "");
   const [catFilter, setCatFilter] = useState(() => storage.get("p_cat") || "");
   const [statusFilter, setStatusFilter] = useState(() => storage.get("p_status") || "");
   const [page, setPage] = useState(() => storage.get("p_page") || 0);
 
-  useEffect(() => {
-    supabase.from("categories").select("*").order("name").then(({ data }) => setCategories(data || []));
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 500);
-      storage.set("p_scroll", window.scrollY);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     storage.set("p_search", search);
@@ -188,9 +178,6 @@ const loadProducts = async (pageNum: number, reset = false) => {
         </>
       )}
 
-      {showScrollTop && (
-        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="fixed bottom-6 right-6 w-11 h-11 bg-slate-900 text-white rounded-full shadow-xl hover:bg-indigo-600 transition flex items-center justify-center text-base font-bold z-50">↑</button>
-      )}
     </div>
   );
 }

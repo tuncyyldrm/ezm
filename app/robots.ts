@@ -5,9 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin', '/login'], 
+      disallow: ['/admin', '/login'],
     },
-    // .xml uzantısı zorunlu değildir. Google bu rotayı doğrudan tarayabilir.
-    sitemap: 'https://ezmoto.vercel.app/sitemap',
+    sitemap: 'https://ezmoto.vercel.app/sitemap.xml',
   };
 }

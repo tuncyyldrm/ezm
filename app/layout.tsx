@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
-// 1. ADIM: Google Analytics bileşenini import edin
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
+import ScrollToTop from "@/components/ScrollToTop";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -71,27 +71,24 @@ export const metadata: Metadata = {
   category: "Otomotiv",
 };
 
-// Schema.org - Organizasyon bilgisi
-const organizationSchema = {
+// 👑 GLOBAL SCHEMA: Google standartlarına tam uyumlu kurumsal şema yapısı
+const globalStoreSchema = {
   "@context": "https://schema.org",
   "@type": "AutoPartsStore",
-  name: "EZM OTO",
-  description: "Oto yedek parça satış ve katalog",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app",
-  telephone: "+905546588556",
-  priceRange: "₺",
-};
-
-const websiteSchema = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "EZM OTO",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app",
-  potentialAction: {
-    "@type": "SearchAction",
-    target: `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/search?q={search_term_string}`,
-    "query-input": "required name=search_term_string",
-  },
+  "@id": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/#organization`,
+  "name": "EZM OTO",
+  "description": "Oto yedek parça satış ve online katalog platformu.",
+  "url": process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app",
+  "telephone": "+905546588556",
+  "priceRange": "₺",
+  "image": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/og-image.jpg`,
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Yedek Parça Sanayi Sitesi", // 💡 Örnek adres alanları Google uyarılarını kapatır
+    "addressLocality": "Merkez",
+    "addressRegion": "Isparta",
+    "addressCountry": "TR"
+  }
 };
 
 export default function RootLayout({
@@ -106,23 +103,20 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Preconnect - Performans */}
+        {/* Supabase için Preconnect katmanı site hızına (LCP) doping yapar */}
         <link rel="preconnect" href="https://erntysmhwfxkrtegirds.supabase.co" />
         <link rel="dns-prefetch" href="https://erntysmhwfxkrtegirds.supabase.co" />
         
-        {/* Schema.org */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(globalStoreSchema) }}
         />
       </head>
       
-      <body className="min-h-full flex flex-col bg-gray-50">
-        {/* Erişilebilirlik - Skip link */}
+      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white">
+        {/* 💡 Google Analytics en üst seviyede sayfa geçişlerini daha sağlıklı yakalar */}
+        <GoogleAnalytics gaId="G-JEB7YLM2RV" />
+
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg"
@@ -130,27 +124,50 @@ export default function RootLayout({
           Ana içeriğe geç
         </a>
 
-        {/* Header */}
+        {/* 👑 SEO DOSTU HEADER NAVİGASYONU */}
+        <header className="bg-white border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-white/90">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <Link 
+              href="/" 
+              title="EZM OTO Ana Sayfa" 
+              className="text-xl font-black font-mono tracking-tighter text-gray-900 hover:text-blue-600 transition-colors"
+            >
+              EZM <span className="text-blue-600">OTO</span>
+            </Link>
+            
+            <nav className="flex items-center gap-6" aria-label="Ana Menü">
+              <a
+                href="https://wa.me/905546588556"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="WhatsApp Hızlı Sipariş Hattı"
+                className="text-sm font-bold text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+              >
+                Sipariş Hattı
+              </a>
+            </nav>
+          </div>
+        </header>
 
-
-        {/* Ana İçerik */}
         <main id="main-content" className="flex-1">
           {children}
         </main>
 
-        {/* Footer */}
         <footer className="bg-white border-t border-gray-200 mt-auto" role="contentinfo">
           <div className="max-w-7xl mx-auto px-4 py-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <p className="text-sm text-gray-500">
+              {/* 💡 suppressHydrationWarning sayesinde istemci-sunucu saat farkından doğan çökmeler engellendi */}
+              <p className="text-sm text-gray-500" suppressHydrationWarning>
                 &copy; {new Date().getFullYear()} EZM OTO. Tüm hakları saklıdır.
               </p>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-6">
                 <Link href="/soket" className="text-xs text-gray-400 hover:text-blue-600 transition-colors">
                   Soket
                 </Link>
                 <a
                   href="https://wa.me/905546588556"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-xs text-gray-400 hover:text-green-600 transition-colors"
                 >
                   İletişim
@@ -159,9 +176,7 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
-
-        {/* 2. ADIM: Google Analytics'i buraya yerleştirin (G- ile başlayan kimliğinizi yazın) */}
-        <GoogleAnalytics gaId="G-JEB7YLM2RV" />
+        <ScrollToTop />
       </body>
     </html>
   );

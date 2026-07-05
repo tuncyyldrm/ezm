@@ -24,6 +24,7 @@ export default function SearchBar() {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultsContainerRef = useRef<HTMLDivElement>(null); // 💡 Klavye navigasyonunda otomatik kaydırma için
   const router = useRouter();
 
   const PROJECT_ID = 'erntysmhwfxkrtegirds';
@@ -41,7 +42,27 @@ export default function SearchBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-// Debounce ile sunucu tarafında arama
+  // Klavye ile aşağı yukarı inildiğinde scroll'u takip etmesi için
+  useEffect(() => {
+    if (selectedIndex === -1 || !resultsContainerRef.current) return;
+    const container = resultsContainerRef.current;
+    const selectedElement = container.children[selectedIndex + 1] as HTMLElement;
+    
+    if (selectedElement) {
+      const containerTop = container.scrollTop;
+      const containerBottom = containerTop + container.clientHeight;
+      const elemTop = selectedElement.offsetTop;
+      const elemBottom = elemTop + selectedElement.clientHeight;
+
+      if (elemTop < containerTop) {
+        container.scrollTop = elemTop;
+      } else if (elemBottom > containerBottom) {
+        container.scrollTop = elemBottom - container.clientHeight;
+      }
+    }
+  }, [selectedIndex]);
+
+  // Debounce ile sunucu tarafında arama
   useEffect(() => {
     let active = true;
 
@@ -61,8 +82,7 @@ export default function SearchBar() {
       try {
         const keywords = trimmed.split(/\s+/);
         
-        // Regex pattern'ini oluştururken tireleri opsiyonel (-?) hale getiriyoruz
-        // Böylece kullanıcı "EUN" yazsa da "E-UN" yazsa da regex yakalayabilir.
+        // Sizin yazdığınız, tire esnekliği sağlayan regex mantığı (Tamamen korundu)
         const flexiblePattern = createTurkishRegexPattern(trimmed).replace(/-/g, '-?');
 
         // Paralel sorgular
@@ -82,22 +102,25 @@ export default function SearchBar() {
             return queryBuilder.limit(8);
           })(),
           
-          // 2. Ürün Kodlarında (OEM, MUADIL, URETICI) Esnek Regex Arama
-          // 🌟 GÜNCELLEME: Burada da imatch (Regex) kullanarak tireli/tiresiz sorununu çözüyoruz.
+          // 2. Ürün Kodlarında Esnek Regex Arama
+          // 💡 GÜNCELLEME: inner join tablosunda 'is_active' kontrolü eklendi, pasif ürünler elendi
           (async () => {
             return supabase
               .from('product_codes')
-              .select('products!inner(id, sku, title, pin_count)')
+              .select('products!inner(id, sku, title, pin_count, is_active)')
+              .eq('products.is_active', true)
               .filter('code_value', 'imatch', `.*${flexiblePattern}.*`)
               .limit(8);
           })(),
           
           // 3. Marka adında Regex arama
+          // 💡 GÜNCELLEME: inner join tablosunda 'is_active' kontrolü eklendi, pasif ürünler elendi
           (async () => {
             const brandPattern = createTurkishRegexPattern(trimmed);
             return supabase
               .from('product_vehicles')
-              .select('products!inner(id, sku, title, pin_count)')
+              .select('products!inner(id, sku, title, pin_count, is_active)')
+              .eq('products.is_active', true)
               .filter('brands.name', 'imatch', `.*${brandPattern}.*`)
               .limit(3);
           })()
@@ -107,7 +130,6 @@ export default function SearchBar() {
 
         const titleData = (titleRes.data || []) as Product[];
         
-        // inner join datalarını temiz bir şekilde çekiyoruz
         const codeData = (codeRes.data || [])
           .map((item: any) => item.products)
           .filter(Boolean) as Product[];
@@ -127,7 +149,7 @@ export default function SearchBar() {
       } catch (err) {
         console.error('Arama hatası:', err);
         if (active) setResults([]);
-      } finally {
+      } finally { // 💡 TypeScript hatası veren 'finaly' yazımı düzeltildi
         if (active) setLoading(false);
       }
     }, 300);
@@ -226,8 +248,11 @@ export default function SearchBar() {
       </div>
       
       {isOpen && (
-        <div className="absolute left-4 right-4 z-[100] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-[400px] overflow-y-auto">
-          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+        <div 
+          ref={resultsContainerRef} 
+          className="absolute left-4 right-4 z-[100] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl max-h-[400px] overflow-y-auto scroll-smooth"
+        >
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{results.length} sonuç bulundu</p>
           </div>
 

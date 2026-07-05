@@ -9,25 +9,23 @@ interface ProductImageProps {
 }
 
 export default function ProductImage({ sku, title, storageUrl }: ProductImageProps) {
-  // İlk state karmaşasını önlemek için ham linki veriyoruz
+  // Cache-breaking ortadan kaldırıldı. Doğrudan temiz statik URL ile başlatıyoruz.
   const [imgSrc, setImgSrc] = useState(`${storageUrl}/${sku}.png`);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     setRetryCount(0);
-    // ⚡ Sayfa yenilendiğinde tarayıcının eski hatalı hafızasını ezmek için ?t= parametresi ekledik
-    setImgSrc(`${storageUrl}/${sku}.png?t=${Date.now()}`);
+    setImgSrc(`${storageUrl}/${sku}.png`);
   }, [sku, storageUrl]);
 
   const handleError = () => {
-    // Eğer zaten no-image aşamasına geldiysek sonsuz döngüyü önlemek için durdur
     if (imgSrc === '/no-image.webp') return;
 
     if (retryCount === 0) {
-      // .png bulamadıysa .jpg dene (yine taze istek parametresi ile)
-      setImgSrc(`${storageUrl}/${sku}.jpg?v=1`);
+      // .png bulunamadıysa .jpg sürümünü kontrol et (Parametresiz, temiz URL)
+      setImgSrc(`${storageUrl}/${sku}.jpg`);
     } else if (retryCount === 1) {
-      // .jpg de bulamadıysa varsayılan resme düş
+      // O da yoksa global fallback resmine geç
       setImgSrc('/no-image.webp');
     }
     setRetryCount(c => c + 1);
@@ -37,7 +35,7 @@ export default function ProductImage({ sku, title, storageUrl }: ProductImagePro
     <img
       key={imgSrc}
       src={imgSrc}
-      alt={title}
+      alt={`${title} - Oto Yedek Parça Görseli`} // Google Görseller indekslemesi için semantik eklenti
       loading="lazy"
       className="max-w-full max-h-full object-contain"
       onError={handleError}

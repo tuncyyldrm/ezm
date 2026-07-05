@@ -19,19 +19,6 @@ export const metadata: Metadata = {
 const STORAGE = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
 const SITE_URL = 'https://ezmoto.vercel.app';
 
-const schema = {
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  name: 'EZM OTO',
-  url: SITE_URL,
-  description: 'Online oto yedek parça kataloğu',
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: `${SITE_URL}/search?q={search_term_string}`,
-    'query-input': 'required name=search_term_string',
-  },
-};
-
 export default async function HomePage() {
   const [{ data: categories, error }, { count: totalProducts }] = await Promise.all([
     supabase.from('categories').select('*').is('parent_id', null).order('name'),
@@ -42,15 +29,47 @@ export default async function HomePage() {
   const cats = (categories || []) as any[];
   const productCount = totalProducts || 0;
 
+  // 👑 SEO OPTİMİZASYONU: Arama ve Mağaza şemalarını birleştirip tek seferde basıyoruz
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'EZM OTO',
+      url: SITE_URL,
+      description: 'Online oto yedek parça kataloğu',
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${SITE_URL}/search?q={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+      },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'AutoPartsStore',
+      name: 'EZM OTO',
+      image: `${SITE_URL}/logo.png`, // Varsa logonuzun tam URL'i
+      url: SITE_URL,
+      description: 'OEM ve muadil otomotiv yedek parça ve soket kataloğu.',
+      priceRange: '$$',
+      numberOfItems: productCount
+    }
+  ];
+
   return (
     <main className="min-h-screen bg-gray-50">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script 
+        type="application/ld+json" 
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} 
+      />
 
-      {/* Hero */}
+      {/* Hero Header */}
       <header className="bg-gradient-to-br from-blue-900 to-zinc-900 text-white text-center py-16 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url(/grid.svg)' }} />
+<div 
+  className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:40px_40px]" 
+  aria-hidden="true" 
+/>
         <div className="relative z-10 max-w-3xl mx-auto">
-<h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-wider text-white mb-2">
+          <h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-wider text-white mb-2">
             EZM <span className="text-blue-500">OTO</span>
           </h1>
           <p className="text-xl md:text-2xl text-blue-200 font-bold mb-4">
@@ -74,7 +93,7 @@ export default async function HomePage() {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 pb-16">
-        {/* Arama */}
+        {/* Arama Alanı */}
         <section className="relative -mt-6 z-20">
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-3 max-w-2xl mx-auto">
             <SearchBar />
@@ -94,17 +113,19 @@ export default async function HomePage() {
           </div>
 
           {cats.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {cats.map(cat => (
                 <Link
                   key={cat.id}
                   href={`/${cat.slug}`}
-                  className="group bg-white border border-gray-100 rounded-2xl p-5 flex flex-col items-center justify-center text-center shadow-sm hover:shadow-lg hover:border-blue-300 transition-all min-h-[160px]"
+                  title={`${cat.name} yedek parça listesi`}
+                  className="group bg-white border border-gray-100 rounded-2xl p-4 flex flex-col items-center justify-between text-center shadow-sm hover:shadow-lg hover:border-blue-300 transition-all min-h-[180px]"
                 >
-                  <div className="w-16 h-16 flex items-center justify-center mb-3 bg-gray-50 rounded-xl group-hover:scale-110 transition-transform">
+                  {/* 🛠️ ÇÖZÜM: Kapsayıcı kutuyu CategoryImage'in 300x300'lük yapısına göre esnettik, sıkışmayı engelledik */}
+                  <div className="relative w-full aspect-square max-w-[120px] mx-auto mb-2 flex items-center justify-center bg-white-50 rounded-xl overflow-hidden group-hover:scale-105 transition-transform duration-300">
                     <CategoryImage slug={cat.slug} name={cat.name} storageUrl={STORAGE} />
                   </div>
-                  <span className="text-xs font-black text-gray-800 uppercase group-hover:text-blue-600 transition-colors">
+                  <span className="text-xs font-black text-gray-800 uppercase group-hover:text-blue-600 transition-colors line-clamp-2 mt-auto pt-2">
                     {cat.name}
                   </span>
                 </Link>
@@ -117,7 +138,7 @@ export default async function HomePage() {
           )}
         </section>
 
-        {/* SEO Metni */}
+        {/* Semantik SEO Metni */}
         <section className="mt-16 bg-white rounded-2xl border border-gray-100 p-8 text-center">
           <h2 className="text-lg font-bold text-gray-900 mb-3">Online Oto Yedek Parça Kataloğu</h2>
           <p className="text-sm text-gray-600 max-w-2xl mx-auto leading-relaxed">

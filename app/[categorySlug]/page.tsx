@@ -1,26 +1,21 @@
 import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
-import { headers } from 'next/headers';
 import CategoryClient from '@/components/CategoryClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
-export const revalidate = 3600;
+// 6 saat boyunca sunucu/CDN seviyesinde tam statik cache
+export const revalidate = 21600; 
 
 interface CategoryPageProps {
   params: Promise<{ categorySlug: string }>;
 }
 
-// 📦 Sabitler
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.vercel.app';
 
-// 🔧 Yardımcı fonksiyonlar
-const getBaseUrl = async () => {
-  const headersList = await headers();
-  const host = headersList.get('host') || 'localhost:3000';
-  const protocol = host.startsWith('localhost') ? 'http' : 'https';
-  return `${protocol}://${host}`;
-};
+// 💡 ÇÖZÜM: `headers()` kaldırıldı, sitenin temel URL'i çevre değişkeninden veya güvenli fall-back'ten üretiliyor.
+const getBaseUrl = () => SITE_URL;
 
 const normalizeProduct = (p: any) => ({
   ...p,
@@ -31,10 +26,21 @@ const normalizeProduct = (p: any) => ({
     : []
 });
 
-// 🏷️ Metadata
+// 🚀 HIZ DOPİNGİ: En popüler kategorileri derleme (build) aşamasında önceden hazırlar
+export async function generateStaticParams() {
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('slug')
+    .limit(50); // İlk 50 kategoriyi önceden üret
+
+  return (categories || []).map((c) => ({
+    categorySlug: c.slug,
+  }));
+}
+
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { categorySlug: slug } = await params;
-  const baseUrl = await getBaseUrl();
+  const baseUrl = getBaseUrl();
   const currentUrl = `${baseUrl}/${slug}`;
   
   const { data: category } = await supabase
@@ -48,7 +54,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   }
 
   const title = `${category.name} Yedek Parça`;
-  const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar. Uyumlu araçlar, detaylı ürün bilgileri. Hemen keşfedin.`;
+  const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar. Uyumlu araçlar ve detaylı ürün kodları.`;
 
   return {
     title,
@@ -61,13 +67,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   };
 }
 
-// 📄 Sayfa
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const { categorySlug: slug } = await params;
-  const baseUrl = await getBaseUrl();
+  const baseUrl = getBaseUrl();
   const currentUrl = `${baseUrl}/${slug}`;
 
-  // Ana kategori bilgisi
   const { data: category, error: categoryError } = await supabase
     .from('categories')
     .select('id, name, parent_id')
@@ -79,31 +83,26 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  // Paralel sorgular
-const [subRes, prodRes, parentRes] = await Promise.all([
-  supabase.from('categories').select('id, name, slug').eq('parent_id', category.id).order('name'),
-  
-  supabase.from('products')
-    .select('id, sku, title, image_url, pin_count, is_new, category_id, product_codes(code_value, code_type), product_vehicles(brands(name))')
-    .eq('category_id', category.id)
-    .eq('is_active', true)
-    // 1. Son ihtimal olarak SKU koduna göre sırala
-    .order('sku', { ascending: true })
-    // 2. Eğer sort_order eşitse (örn hepsi 0 ise), "Yeni Ürün" etiketli olanları üste çıkart
-    .order('is_new', { ascending: false })
-    // 3. Hala eşitlik varsa, alfabetik ürün başlığına göre diz
-    .order('title', { ascending: true }),
+  const [subRes, prodRes, parentRes] = await Promise.all([
+    supabase.from('categories').select('id, name, slug').eq('parent_id', category.id).order('name'),
+    
+    supabase.from('products')
+      .select('id, sku, title, image_url, pin_count, is_new, category_id, product_codes(code_value, code_type), product_vehicles(brands(name))')
+      .eq('category_id', category.id)
+      .eq('is_active', true)
+      .order('sku', { ascending: true })
+      .order('is_new', { ascending: false })
+      .order('title', { ascending: true }),
 
-  category.parent_id 
-    ? supabase.from('categories').select('id, name, slug').eq('id', category.parent_id).maybeSingle()
-    : Promise.resolve({ data: null })
-]);
+    category.parent_id 
+      ? supabase.from('categories').select('id, name, slug').eq('id', category.parent_id).maybeSingle()
+      : Promise.resolve({ data: null })
+  ]);
 
   const products = (prodRes.data || []).map(normalizeProduct);
   const subCategories = subRes.data || [];
   const parent = parentRes.data;
 
-  // 🎯 Schema.org
   const schema = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -144,7 +143,6 @@ const [subRes, prodRes, parentRes] = await Promise.all([
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Breadcrumb */}
         <nav className="mb-6 text-sm" aria-label="Breadcrumb">
           <ol className="flex items-center flex-wrap gap-x-1 gap-y-0.5 text-gray-500">
             <li><Link href="/" className="hover:text-blue-600">Ana Sayfa</Link></li>
@@ -161,7 +159,6 @@ const [subRes, prodRes, parentRes] = await Promise.all([
           </ol>
         </nav>
 
-        {/* Başlık */}
         <header className="mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
             {category.name} Yedek Parçaları
@@ -171,7 +168,6 @@ const [subRes, prodRes, parentRes] = await Promise.all([
           </p>
         </header>
 
-        {/* Alt Kategoriler */}
         {subCategories.length > 0 && (
           <nav className="mb-8" aria-label="Alt kategoriler">
             <h2 className="text-xs font-bold text-gray-400 uppercase mb-3">
@@ -191,7 +187,6 @@ const [subRes, prodRes, parentRes] = await Promise.all([
           </nav>
         )}
 
-        {/* Ürünler */}
         <section aria-label={`${category.name} ürünleri`}>
           <CategoryClient categoryName={category.name} products={products} />
         </section>
