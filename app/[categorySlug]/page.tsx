@@ -37,7 +37,7 @@ export async function generateStaticParams() {
   }));
 }
 
-// 🚀 WHATSAPP BOTUNA KATEGORİNİN RESMİNİ EKSİKSİZ GÖSTEREN KISIM
+// 🚀 SOSYAL MEDYA VE WHATSAPP BOTLARINA KATEGORİ GÖRSELİNİ GARANTİLİ GÖNDEREN KISIM
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { categorySlug: slug } = await params;
   const baseUrl = getBaseUrl();
@@ -53,8 +53,9 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     return { title: 'Kategori Bulunamadı', robots: { index: false } };
   }
 
-  // 🎯 Kategori resminin tam adresi (Uzantısı .png ise alt tarafı .png yapabilirsin)
-  const categoryImage = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.jpg`;
+  // 🎯 ÇÖZÜM: Hem .jpg hem .JPG versiyonlarını hazırlayıp bota alternatif sunuyoruz
+  const categoryImageJpg = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.jpg?ver=v1.0.2`;
+  const categoryImageJpgUpper = `https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/category-images/${slug}.JPG?ver=v1.0.2`;
 
   const title = `${category.name} Yedek Parça`;
   const description = `${category.name} kategorisinde OEM ve muadil oto yedek parçalar. Uyumlu araçlar ve detaylı ürün kodları.`;
@@ -69,9 +70,17 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
       siteName: 'EZM OTO', 
       locale: 'tr_TR', 
       type: 'website',
-      images: [{ url: categoryImage, width: 1200, height: 630, alt: title }] // Bot resmi buradan vurup alacak
+      images: [
+        { url: categoryImageJpg, width: 1200, height: 630, alt: title },
+        { url: categoryImageJpgUpper, width: 1200, height: 630, alt: title }
+      ] // Bot ilkini bulamazsa ikincisini havada yakalar
     },
-    twitter: { card: 'summary_large_image', title, description, images: [categoryImage] },
+    twitter: { 
+      card: 'summary_large_image', 
+      title, 
+      description, 
+      images: [categoryImageJpg, categoryImageJpgUpper] 
+    },
     alternates: { canonical: currentUrl },
     robots: { index: true, follow: true },
     keywords: `${category.name}, oto yedek parça, OEM, araba parçası`,
