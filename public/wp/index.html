@@ -211,7 +211,7 @@
         #stage {
             width: 360px;
             height: 640px;
-            background: #111;
+            background: #fff;
             position: relative;
             overflow: hidden;
             border-radius: 4px;
@@ -371,6 +371,24 @@
             font-size: 0.7rem;
             border: 1px solid var(--brd);
         }
+
+        .logo-preview {
+            width: 100%;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            border-radius: 6px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        
+        .logo-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -387,7 +405,7 @@
                         <option value="contain">Sığdır</option>
                         <option value="cover">Kapla</option>
                     </select>
-                    <input type="color" id="bgColor" value="#111111">
+                    <input type="color" id="bgColor" value="#ffffff">
                 </div>
             </div>
 
@@ -397,8 +415,17 @@
                     <button class="btn btn-s" onclick="addLayer('txt')">📝 Metin</button>
                     <button class="btn btn-s" onclick="addLayer('txt','🔥')">😀 Emoji</button>
                 </div>
-                <button class="btn btn-s btn-block" style="margin-top:6px;" onclick="document.getElementById('imgFile').click()">🖼 Logo/Görsel</button>
+                <div class="row" style="margin-top:6px;">
+                    <button class="btn btn-s" onclick="document.getElementById('imgFile').click()">🖼 Logo/Görsel</button>
+                    <button class="btn btn-s" onclick="addDefaultLogo()">🏢 Varsayılan Logo</button>
+                </div>
                 <input type="file" id="imgFile" accept="image/*" style="display:none;">
+                
+                <div class="logo-preview">
+                    <img src="https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images/logo.png" 
+                         alt="Varsayılan Logo" 
+                         onerror="this.style.display='none'">
+                </div>
             </div>
 
             <div class="sec" id="propBox">
@@ -435,8 +462,8 @@
                 </div>
                 <div id="imgProps" style="display:none;">
                     <div class="row">
-                        <div class="frm"><label>Genişlik</label><input type="number" id="imgW" min="20" max="300" value="80"></div>
-                        <div class="frm"><label>Yükseklik</label><input type="number" id="imgH" min="20" max="300" value="80"></div>
+                        <div class="frm"><label>Genişlik</label><input type="number" id="imgW" min="20" max="360" value="321"></div>
+                        <div class="frm"><label>Yükseklik</label><input type="number" id="imgH" min="20" max="640" value="130"></div>
                     </div>
                 </div>
                 <div class="row" style="margin-top:8px;">
@@ -450,6 +477,7 @@
             <div class="sec">
                 <h3>🎯 Şablonlar</h3>
                 <div class="row">
+                    <button class="btn btn-s btn-sm" onclick="template('default')">🏢 Varsayılan</button>
                     <button class="btn btn-s btn-sm" onclick="template('quote')">💬 Alıntı</button>
                     <button class="btn btn-s btn-sm" onclick="template('promo')">📢 Promo</button>
                     <button class="btn btn-s btn-sm" onclick="template('minimal')">✨ Minimal</button>
@@ -463,7 +491,7 @@
             <h2>📱 Önizleme</h2>
             <div class="preview-wrap">
                 <div id="stage">
-                    <img id="bg-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='640'%3E%3Crect fill='%23222' width='360' height='640'/%3E%3Ctext x='180' y='320' fill='%238696a0' font-size='14' text-anchor='middle'%3EArka plan y%C3%BCkleyin%3C/text%3E%3C/svg%3E">
+                    <img id="bg-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='640'%3E%3Crect fill='%23fff' width='360' height='640'/%3E%3C/svg%3E">
                 </div>
             </div>
             <div id="info" style="font-size:0.7rem; color:var(--mut); margin-top:5px;">Tıkla → Sürükle → Düzenle → Paylaş</div>
@@ -502,12 +530,14 @@
 
     <script>
         // === STATE ===
+        const DEFAULT_LOGO_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images/logo.png';
+        
         const S = {
             sel: null,
             z: 10,
             hist: [],
             maxHist: 15,
-            bgImage: null, // Arka plan resmi için referans
+            bgImage: null,
             bgImageLoaded: false
         };
         const stage = document.getElementById('stage');
@@ -521,12 +551,10 @@
         // === INIT ===
         stage.style.background = bgColor.value;
 
-        // Arka plan rengi değiştiğinde
         bgColor.oninput = () => {
             stage.style.background = bgColor.value;
         };
 
-        // Sığdır/Kapla seçeneği değiştiğinde
         bgFit.onchange = () => {
             bgImg.style.objectFit = bgFit.value;
             updateBgImgDisplay();
@@ -575,6 +603,26 @@
             r.readAsDataURL(f);
         };
 
+        // Varsayılan logo ekleme
+        function addDefaultLogo() {
+            const testImg = new Image();
+            testImg.onload = () => {
+                const el = addLayer('img', DEFAULT_LOGO_URL);
+                // Varsayılan logo boyutları ve konumu
+                el.style.width = '321px';
+                el.style.height = '130px';
+                el.style.left = '26px';
+                el.style.top = '10px';
+                updateList();
+                select(el);
+                toast('✅ Varsayılan logo eklendi');
+            };
+            testImg.onerror = () => {
+                toast('❌ Logo yüklenemedi! Lütfen manuel olarak yükleyin.');
+            };
+            testImg.src = DEFAULT_LOGO_URL;
+        }
+
         // Stage tıklama olayı
         stage.onclick = e => {
             if (e.target === stage || e.target === bgImg) deselect();
@@ -603,7 +651,7 @@
                 el.style.textAlign = 'center';
             } else if (type === 'img') {
                 el.innerHTML =
-                    `<img src="${content}" style="width:100%;height:100%;object-fit:contain;pointer-events:none;">`;
+                    `<img src="${content}" style="width:100%;height:100%;object-fit:contain;pointer-events:none;" onerror="this.parentElement.style.display='none';">`;
                 el.style.width = '80px';
                 el.style.height = '80px';
             }
@@ -661,7 +709,6 @@
                 const hex = rgb2hex(bgColor);
                 document.getElementById('txtBg').value = hex || '#000000';
 
-                // Opaklık değerini al
                 const opacityMatch = bgColor.match(/[\d.]+\)$/);
                 document.getElementById('txtOpacity').value = opacityMatch ? parseFloat(opacityMatch[0]) : '0.8';
 
@@ -859,8 +906,7 @@
                 S.sel.style.height = document.getElementById('imgH').value + 'px';
             };
 
-            ['txtContent', 'txtFont', 'txtAlign', 'txtOpacity'].forEach(id => document.getElementById(id).onchange =
-                sync);
+            ['txtContent', 'txtFont', 'txtAlign', 'txtOpacity'].forEach(id => document.getElementById(id).onchange = sync);
             ['txtSize', 'txtSpace'].forEach(id => document.getElementById(id).oninput = sync);
             ['txtColor', 'txtBg'].forEach(id => document.getElementById(id).oninput = sync);
             ['imgW', 'imgH'].forEach(id => document.getElementById(id).oninput = syncImg);
@@ -961,6 +1007,34 @@
         // === TEMPLATES ===
         function template(type) {
             resetAll();
+            
+            if (type === 'default') {
+                // Varsayılan tasarım: Logo üstte, metin altta
+                bgColor.value = '#ffffff';
+                stage.style.background = '#ffffff';
+                
+                // Logo katmanı
+                const logoEl = addLayer('img', DEFAULT_LOGO_URL);
+                logoEl.style.width = '321px';
+                logoEl.style.height = '130px';
+                logoEl.style.left = '26px';
+                logoEl.style.top = '10px';
+                
+                // Metin katmanı
+                const txtEl = addLayer('txt', 'Hoş Geldiniz!');
+                txtEl.style.fontSize = '20px';
+                txtEl.style.fontFamily = 'sans-serif';
+                txtEl.style.color = '#ffffff';
+                txtEl.style.backgroundColor = 'rgba(0,0,0,0.75)';
+                txtEl.style.left = '88px';
+                txtEl.style.top = '505px';
+                txtEl.style.width = '199px';
+                
+                select(txtEl);
+                toast('✅ Varsayılan tasarım yüklendi');
+                return;
+            }
+            
             const t = {
                 quote: {
                     bg: '#1a1a2e',
@@ -1032,7 +1106,7 @@
             toast('✅ Şablon yüklendi');
         }
 
-        // === EXPORT (DÜZELTİLMİŞ) ===
+        // === EXPORT ===
         async function exportImg(format) {
             if (S.sel) S.sel.classList.remove('sel');
             const q = parseInt(document.getElementById('quality').value);
@@ -1041,24 +1115,20 @@
             toast('⏳ İşleniyor...');
 
             try {
-                // Ana tuval oluştur
                 const mainCanvas = document.createElement('canvas');
                 mainCanvas.width = W * q;
                 mainCanvas.height = H * q;
                 const ctx = mainCanvas.getContext('2d');
 
-                // 1. Arka plan rengini çiz
                 ctx.fillStyle = bgColor.value;
                 ctx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
-                // 2. Arka plan resmini doğru şekilde çiz
                 if (S.bgImageLoaded && S.bgImage) {
                     const img = S.bgImage;
                     const fit = bgFit.value;
 
                     ctx.save();
                     if (fit === 'cover') {
-                        // Cover: Resmi tuvalı tamamen kaplayacak şekilde ölçekle
                         const scale = Math.max(W / img.width, H / img.height);
                         const w = img.width * scale;
                         const h = img.height * scale;
@@ -1066,7 +1136,6 @@
                         const y = (H - h) / 2;
                         ctx.drawImage(img, x * q, y * q, w * q, h * q);
                     } else {
-                        // Contain: Resmi tuvala sığdır
                         const scale = Math.min(W / img.width, H / img.height);
                         const w = img.width * scale;
                         const h = img.height * scale;
@@ -1077,26 +1146,24 @@
                     ctx.restore();
                 }
 
-                // 3. Katmanları render et
                 const layers = stage.querySelectorAll('.layer');
                 for (const layer of layers) {
                     const rect = layer.getBoundingClientRect();
                     const stageRect = stage.getBoundingClientRect();
 
-                    // Katmanın stage içindeki konumunu hesapla
                     const scaleX = W / stageRect.width;
                     const scaleY = H / stageRect.height;
                     const x = (rect.left - stageRect.left) * scaleX;
                     const y = (rect.top - stageRect.top) * scaleY;
 
-                    // Katman canvas'ını oluştur
                     const layerCanvas = await html2canvas(layer, {
                         scale: 1,
                         backgroundColor: null,
-                        logging: false
+                        logging: false,
+                        allowTaint: true,
+                        useCORS: true
                     });
 
-                    // Katmanı ana tuvale çiz
                     ctx.drawImage(
                         layerCanvas,
                         x * q,
@@ -1106,7 +1173,6 @@
                     );
                 }
 
-                // 4. Dışa aktar
                 if (format === 'png') {
                     const a = document.createElement('a');
                     a.download = `wp-status-${Date.now()}.png`;
@@ -1134,10 +1200,9 @@
         function resetAll() {
             saveState();
             stage.querySelectorAll('.layer').forEach(l => l.remove());
-            stage.style.background = '#111111';
-            bgColor.value = '#111111';
-            bgImg.src =
-                "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='640'%3E%3Crect fill='%23222' width='360' height='640'/%3E%3Ctext x='180' y='320' fill='%238696a0' font-size='14' text-anchor='middle'%3EArka plan y%C3%BCkleyin%3C/text%3E%3C/svg%3E";
+            stage.style.background = '#ffffff';
+            bgColor.value = '#ffffff';
+            bgImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='640'%3E%3Crect fill='%23fff' width='360' height='640'/%3E%3C/svg%3E";
             bgImg.style.display = 'block';
             S.bgImage = null;
             S.bgImageLoaded = false;
@@ -1170,6 +1235,14 @@
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 2000);
         }
+
+        // === SAYFA YÜKLENDİĞİNDE VARSAYILAN TASARIMI YÜKLE ===
+        window.addEventListener('DOMContentLoaded', () => {
+            // Kısa bir gecikmeyle varsayılan tasarımı yükle
+            setTimeout(() => {
+                template('default');
+            }, 100);
+        });
     </script>
 </body>
 </html>
