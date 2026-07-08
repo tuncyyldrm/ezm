@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 // 6 saat boyunca sunucu/CDN seviyesinde tam statik cache
-export const revalidate = 21600; 
+export const revalidate = 300; 
 
 interface CategoryPageProps {
   params: Promise<{ categorySlug: string }>;
