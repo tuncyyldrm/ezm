@@ -5,6 +5,7 @@ import Script from "next/script";
 import "./globals.css";
 import ScrollToTop from "@/components/ScrollToTop";
 import CoreStatusMonitor from '@/components/CoreStatusMonitor';
+import CookieBanner from '@/components/CookieBanner'; // 1. Bileşeni içe aktar
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -183,6 +184,7 @@ export default function RootLayout({
         </footer>
         <ScrollToTop />
         <CoreStatusMonitor />
+        <CookieBanner />
       </body>
     </html>
   );

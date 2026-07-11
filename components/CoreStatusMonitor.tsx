@@ -5,6 +5,11 @@ import { useEffect, Suspense } from 'react';
 
 const getOrCreateId = (key: string) => {
   if (typeof window === 'undefined') return '';
+  
+  // EĞER KULLANICI REDDETTİYSE ID ÜRETME, BOŞ DÖN
+  const consent = localStorage.getItem('cookie_consent_accepted');
+  if (consent === 'false') return '';
+
   let id = localStorage.getItem(key);
   if (!id) {
     id = Math.random().toString(36).substring(2, 15);
@@ -16,6 +21,10 @@ const getOrCreateId = (key: string) => {
 export const trackCustomEvent = (eventName: string, customParams: Record<string, any> = {}) => {
   if (typeof window === 'undefined') return;
   
+  // EĞER KULLANICI REDDETTİYSE API'YE İSTEK ATMA
+  const consent = localStorage.getItem('cookie_consent_accepted');
+  if (consent === 'false') return;
+
   const uid = localStorage.getItem('_core_uid') || '';
   const sid = sessionStorage.getItem('_core_sid') || '';
 
@@ -36,12 +45,15 @@ export const trackCustomEvent = (eventName: string, customParams: Record<string,
   }).catch(() => {});
 };
 
-// Next.js derleyicisini (Build) patlatmamak için asıl mantığı buraya alıyoruz
 function MonitorInternal() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Kullanıcı reddettiyse takibi tamamen durdur
+    const consent = localStorage.getItem('cookie_consent_accepted');
+    if (consent === 'false') return;
+
     getOrCreateId('_core_uid');
     let sessionId = sessionStorage.getItem('_core_sid');
     if (!sessionId) {
@@ -59,7 +71,6 @@ function MonitorInternal() {
   return null;
 }
 
-// Dışarıya aktardığımız ana bileşeni Suspense ile sarmallıyoruz
 export default function CoreStatusMonitor() {
   return (
     <Suspense fallback={null}>
