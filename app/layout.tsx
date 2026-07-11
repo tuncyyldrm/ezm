@@ -4,7 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
 import ScrollToTop from "@/components/ScrollToTop";
-import AnalyticsProvider from '@/components/AnalyticsProvider';
+import CoreStatusMonitor from '@/components/CoreStatusMonitor';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -181,7 +181,7 @@ export default function RootLayout({
           </div>
         </footer>
         <ScrollToTop />
-        <AnalyticsProvider />
+        <CoreStatusMonitor />
       </body>
     </html>
   );
