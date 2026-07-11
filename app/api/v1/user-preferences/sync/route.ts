@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
 const GA_API_SECRET = process.env.GA_API_SECRET;
 
-const DEBUG_GA = false;
+const DEBUG_GA = true;
 
 const BOT_REGEX =
   /bot|crawler|spider|crawl|GPTBot|ClaudeBot|AhrefsBot|SemrushBot|YandexBot|bingbot|Googlebot/i;
@@ -374,7 +374,13 @@ export async function POST(request: Request) {
         debugResult
       );
     }
+const debugResponse =
+  await gaResponse.text();
 
+console.log(
+  '[GA DEBUG]',
+  debugResponse
+);
     if (!gaResponse.ok) {
       console.error(
         '[Analytics] GA Request Failed:',
