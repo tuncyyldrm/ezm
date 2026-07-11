@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   
   // Ürünün tam resim linki oluşturuluyor
   const img = `${STORAGE_URL}/${p.sku}.${IMAGE_EXTENSION}`; 
-  const title = `${p.sku} ${p.title} - ${kategoriAdi} | EZM OTO`;
+  const title = `${p.sku} ${p.title} - ${kategoriAdi}`;
   const desc = `${p.sku} SKU kodlu ${p.title} yedek parça. ${p.pin_count ? `${p.pin_count} PIN soket yapısına sahiptir.` : ''}`;
 
   return {
