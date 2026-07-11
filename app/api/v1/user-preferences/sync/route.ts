@@ -150,29 +150,33 @@ export async function POST(request: Request) {
 
     const clientIp =
       request.headers.get('x-real-ip') ||
+      request.headers.get('x-vercel-forwarded-for') ||
       request.headers
         .get('x-forwarded-for')
         ?.split(',')[0]
         ?.trim() ||
       '';
 
-    let geo = await resolveGeo(clientIp);
+    let geo: GeoResult = {
+      country:
+        request.headers.get(
+          'x-vercel-ip-country'
+        ) || '',
 
-    if (!geo.country) {
-      geo = {
-        country:
-          request.headers.get(
-            'x-vercel-ip-country'
-          ) || '',
-        region:
-          request.headers.get(
-            'x-vercel-ip-country-region'
-          ) || '',
-        city:
-          request.headers.get(
-            'x-vercel-ip-city'
-          ) || '',
-      };
+      region:
+        request.headers.get(
+          'x-vercel-ip-country-region'
+        ) || '',
+
+      city:
+        request.headers.get(
+          'x-vercel-ip-city'
+        ) || '',
+    };
+
+
+    if (!geo.country && clientIp) {
+      geo = await resolveGeo(clientIp);
     }
 
     let pagePath = '/';
