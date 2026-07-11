@@ -1,3 +1,5 @@
+// app/api/v1/user-preferences/sync/route.ts
+
 import { NextResponse } from 'next/server';
 
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
@@ -8,6 +10,9 @@ const BOT_REGEX =
 
 const MAX_EVENT_NAME_LENGTH = 40;
 
+// Geliştirme sırasında true yapabilirsin
+const DEBUG_GA = false;
+
 export async function POST(request: Request) {
   let timeoutId: NodeJS.Timeout | undefined;
 
@@ -16,12 +21,8 @@ export async function POST(request: Request) {
       console.error('[Analytics] Missing GA configuration');
 
       return NextResponse.json(
-        {
-          status: 'analytics_disabled',
-        },
-        {
-          status: 500,
-        }
+        { status: 'analytics_disabled' },
+        { status: 500 }
       );
     }
 
@@ -57,12 +58,8 @@ export async function POST(request: Request) {
       eventName.length > MAX_EVENT_NAME_LENGTH
     ) {
       return NextResponse.json(
-        {
-          status: 'invalid_event_name',
-        },
-        {
-          status: 400,
-        }
+        { status: 'invalid_event_name' },
+        { status: 400 }
       );
     }
 
@@ -71,12 +68,8 @@ export async function POST(request: Request) {
 
     if (BOT_REGEX.test(userAgent)) {
       return NextResponse.json(
-        {
-          status: 'ignored_bot',
-        },
-        {
-          status: 200,
-        }
+        { status: 'ignored_bot' },
+        { status: 200 }
       );
     }
 
@@ -88,24 +81,19 @@ export async function POST(request: Request) {
       request.headers.get('x-real-ip') ||
       '';
 
-    // Vercel Geo Headers
+    // Vercel Geo
     const country =
-      request.headers.get('x-vercel-ip-country') ||
-      '';
+      request.headers.get('x-vercel-ip-country') || '';
 
     const region =
-      request.headers.get(
-        'x-vercel-ip-country-region'
-      ) || '';
+      request.headers.get('x-vercel-ip-country-region') || '';
 
     const city =
-      request.headers.get('x-vercel-ip-city') ||
-      '';
+      request.headers.get('x-vercel-ip-city') || '';
 
     let pagePath = '/';
 
-    const campaignParams: Record<string, string> =
-      {};
+    const campaignParams: Record<string, string> = {};
 
     try {
       if (
@@ -114,53 +102,46 @@ export async function POST(request: Request) {
       ) {
         const urlObj = new URL(contextId);
 
+        // Next.js RSC temizliği
+        urlObj.searchParams.delete('_rsc');
+
         pagePath =
-          urlObj.pathname + urlObj.search;
+          urlObj.pathname +
+          (
+            urlObj.searchParams.toString()
+              ? `?${urlObj.searchParams.toString()}`
+              : ''
+          );
 
         const utmSource =
-          urlObj.searchParams.get(
-            'utm_source'
-          );
+          urlObj.searchParams.get('utm_source');
 
         const utmMedium =
-          urlObj.searchParams.get(
-            'utm_medium'
-          );
+          urlObj.searchParams.get('utm_medium');
 
         const utmCampaign =
-          urlObj.searchParams.get(
-            'utm_campaign'
-          );
+          urlObj.searchParams.get('utm_campaign');
 
         const utmContent =
-          urlObj.searchParams.get(
-            'utm_content'
-          );
+          urlObj.searchParams.get('utm_content');
 
         const utmTerm =
-          urlObj.searchParams.get(
-            'utm_term'
-          );
+          urlObj.searchParams.get('utm_term');
 
         if (utmSource)
-          campaignParams.source =
-            utmSource;
+          campaignParams.source = utmSource;
 
         if (utmMedium)
-          campaignParams.medium =
-            utmMedium;
+          campaignParams.medium = utmMedium;
 
         if (utmCampaign)
-          campaignParams.campaign =
-            utmCampaign;
+          campaignParams.campaign = utmCampaign;
 
         if (utmContent)
-          campaignParams.content =
-            utmContent;
+          campaignParams.content = utmContent;
 
         if (utmTerm)
-          campaignParams.term =
-            utmTerm;
+          campaignParams.term = utmTerm;
       }
     } catch {
       pagePath =
@@ -169,11 +150,29 @@ export async function POST(request: Request) {
           : '/';
     }
 
-    const gaPayload = {
+    const gaPayload: any = {
       client_id:
         typeof uid === 'string' && uid
           ? uid
           : crypto.randomUUID(),
+
+      ...(clientIp && {
+        ip_override: clientIp,
+      }),
+
+      ...(country && {
+        user_location: {
+          country_id: country,
+
+          ...(region && {
+            region_id: `${country}-${region}`,
+          }),
+
+          ...(city && {
+            city,
+          }),
+        },
+      }),
 
       user_properties: {
         language: {
@@ -181,18 +180,6 @@ export async function POST(request: Request) {
             typeof language === 'string'
               ? language
               : 'unknown',
-        },
-
-        country: {
-          value: country,
-        },
-
-        region: {
-          value: region,
-        },
-
-        city: {
-          value: city,
         },
       },
 
@@ -236,11 +223,8 @@ export async function POST(request: Request) {
             timezone:
               timezone || '',
 
-            country,
-            region,
-            city,
-
             ...campaignParams,
+
             ...restParams,
           },
         },
@@ -254,17 +238,19 @@ export async function POST(request: Request) {
       controller.abort();
     }, 5000);
 
+    const endpoint = DEBUG_GA
+      ? `https://www.google-analytics.com/debug/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`
+      : `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`;
+
     const gaResponse = await fetch(
-      `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`,
+      endpoint,
       {
         method: 'POST',
         headers: {
-          'Content-Type':
-            'application/json',
+          'Content-Type': 'application/json',
 
           ...(userAgent && {
-            'User-Agent':
-              userAgent,
+            'User-Agent': userAgent,
           }),
 
           ...(clientIp && {
@@ -279,6 +265,16 @@ export async function POST(request: Request) {
       }
     );
 
+    if (DEBUG_GA) {
+      const debugText =
+        await gaResponse.text();
+
+      console.log(
+        '[GA DEBUG]',
+        debugText
+      );
+    }
+
     if (!gaResponse.ok) {
       console.error(
         '[Analytics] GA Request Failed:',
@@ -287,12 +283,8 @@ export async function POST(request: Request) {
       );
 
       return NextResponse.json(
-        {
-          status: 'ga_error',
-        },
-        {
-          status: 500,
-        }
+        { status: 'ga_error' },
+        { status: 500 }
       );
     }
 
@@ -305,6 +297,8 @@ export async function POST(request: Request) {
           region,
           city,
         },
+
+        pagePath,
       },
       {
         status: 200,
@@ -317,12 +311,8 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json(
-      {
-        status: 'idle',
-      },
-      {
-        status: 200,
-      }
+      { status: 'idle' },
+      { status: 200 }
     );
   } finally {
     if (timeoutId) {

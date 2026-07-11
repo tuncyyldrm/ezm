@@ -3,47 +3,60 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 dakika
+const SESSION_TIMEOUT = 30 * 60 * 1000;
+
+function hasConsent(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  return (
+    localStorage.getItem(
+      'cookie_consent_accepted'
+    ) !== 'false'
+  );
+}
 
 function getDeviceType(): 'mobile' | 'tablet' | 'desktop' {
-  if (typeof window === 'undefined') {
+  if (typeof navigator === 'undefined') {
     return 'desktop';
   }
 
-  const width = window.innerWidth;
+  const ua = navigator.userAgent.toLowerCase();
 
-  if (width < 768) return 'mobile';
-  if (width < 1024) return 'tablet';
+  if (
+    /ipad|tablet|playbook|silk/i.test(ua)
+  ) {
+    return 'tablet';
+  }
+
+  if (
+    /android|iphone|ipod|mobile/i.test(ua)
+  ) {
+    return 'mobile';
+  }
 
   return 'desktop';
 }
 
-function hasConsent(): boolean {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const consent = localStorage.getItem(
-    'cookie_consent_accepted'
-  );
-
-  return consent !== 'false';
-}
-
-function getOrCreateId(key: string): string {
-  if (typeof window === 'undefined') {
+function getOrCreateId(
+  key: string
+): string {
+  if (
+    typeof window === 'undefined' ||
+    !hasConsent()
+  ) {
     return '';
   }
 
-  if (!hasConsent()) {
-    return '';
-  }
-
-  let id = localStorage.getItem(key);
+  let id =
+    localStorage.getItem(key);
 
   if (!id) {
     id = crypto.randomUUID();
-    localStorage.setItem(key, id);
+
+    localStorage.setItem(
+      key,
+      id
+    );
   }
 
   return id;
@@ -60,13 +73,18 @@ function getOrCreateSession(): string {
     ) || 0;
 
   let sid =
-    sessionStorage.getItem('_core_sid');
+    sessionStorage.getItem(
+      '_core_sid'
+    );
 
   if (
     !sid ||
-    now - lastActivity > SESSION_TIMEOUT
+    now - lastActivity >
+      SESSION_TIMEOUT
   ) {
-    sid = Math.floor(now / 1000).toString();
+    sid = Math.floor(
+      now / 1000
+    ).toString();
 
     sessionStorage.setItem(
       '_core_sid',
@@ -99,7 +117,8 @@ function sendAnalytics(
     );
 
     if (
-      typeof navigator !== 'undefined' &&
+      typeof navigator !==
+        'undefined' &&
       navigator.sendBeacon
     ) {
       navigator.sendBeacon(
@@ -119,7 +138,9 @@ function sendAnalytics(
         'Content-Type':
           'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(
+        payload
+      ),
       keepalive: true,
     }
   ).catch(() => {});
@@ -127,7 +148,10 @@ function sendAnalytics(
 
 export function trackCustomEvent(
   eventName: string,
-  customParams: Record<string, any> = {}
+  customParams: Record<
+    string,
+    any
+  > = {}
 ) {
   if (
     typeof window === 'undefined' ||
@@ -137,35 +161,47 @@ export function trackCustomEvent(
   }
 
   const uid =
-    localStorage.getItem('_core_uid') ||
-    '';
+    localStorage.getItem(
+      '_core_uid'
+    ) || '';
 
-  const sid = getOrCreateSession();
+  const sid =
+    getOrCreateSession();
+
+  const connection = (
+    navigator as any
+  )?.connection;
 
   const payload = {
     eventName,
 
-    contextId: window.location.href,
+    contextId:
+      window.location.href,
 
-    viewLabel: document.title,
+    viewLabel:
+      document.title,
 
     uid,
 
     sid,
 
-    timestamp: Date.now(),
+    timestamp:
+      Date.now(),
 
     language:
-      navigator.language || '',
+      navigator.language,
 
     timezone:
-      Intl.DateTimeFormat().resolvedOptions()
+      Intl.DateTimeFormat()
+        .resolvedOptions()
         .timeZone,
 
     referrer:
-      document.referrer || '$direct',
+      document.referrer ||
+      '$direct',
 
-    deviceType: getDeviceType(),
+    deviceType:
+      getDeviceType(),
 
     screenResolution:
       `${window.screen.width}x${window.screen.height}`,
@@ -176,6 +212,19 @@ export function trackCustomEvent(
     userAgent:
       navigator.userAgent,
 
+    networkType:
+      connection
+        ?.effectiveType ||
+      '',
+
+    downlink:
+      connection?.downlink ||
+      null,
+
+    rtt:
+      connection?.rtt ||
+      null,
+
     ...customParams,
   };
 
@@ -183,48 +232,82 @@ export function trackCustomEvent(
 }
 
 function MonitorInternal() {
-  const pathname = usePathname();
+  const pathname =
+    usePathname();
+
   const searchParams =
     useSearchParams();
 
   const pageStartRef =
-    useRef<number>(Date.now());
+    useRef(Date.now());
+
+  const activeStartRef =
+    useRef(Date.now());
+
+  const activeTimeRef =
+    useRef(0);
 
   const maxScrollRef =
-    useRef<number>(0);
+    useRef(0);
 
   const pageViewSentRef =
     useRef(false);
+
+  const scrollMilestonesRef =
+    useRef({
+      25: false,
+      50: false,
+      75: false,
+      100: false,
+    });
 
   useEffect(() => {
     if (!hasConsent()) {
       return;
     }
 
-    getOrCreateId('_core_uid');
+    getOrCreateId(
+      '_core_uid'
+    );
+
     getOrCreateSession();
 
     pageStartRef.current =
       Date.now();
 
+    activeStartRef.current =
+      Date.now();
+
+    activeTimeRef.current = 0;
+
     maxScrollRef.current = 0;
 
-    pageViewSentRef.current = false;
+    pageViewSentRef.current =
+      false;
 
-    const timer = setTimeout(() => {
-      if (
-        pageViewSentRef.current
-      ) {
-        return;
-      }
+    scrollMilestonesRef.current =
+      {
+        25: false,
+        50: false,
+        75: false,
+        100: false,
+      };
 
-      pageViewSentRef.current =
-        true;
+    const timer =
+      setTimeout(() => {
+        if (
+          pageViewSentRef.current
+        ) {
+          return;
+        }
 
-      trackCustomEvent(
-        'page_view'
-      );
-    }, 150);
+        pageViewSentRef.current =
+          true;
+
+        trackCustomEvent(
+          'page_view'
+        );
+      }, 150);
 
     return () => {
       clearTimeout(timer);
@@ -239,6 +322,9 @@ function MonitorInternal() {
           duration_ms:
             duration,
 
+          active_time_ms:
+            activeTimeRef.current,
+
           max_scroll:
             maxScrollRef.current,
         }
@@ -251,12 +337,29 @@ function MonitorInternal() {
       return;
     }
 
-    const updateActivity = () => {
-      sessionStorage.setItem(
-        '_core_last_activity',
-        Date.now().toString()
-      );
-    };
+    let lastActivityUpdate = 0;
+
+    const updateActivity =
+      () => {
+        const now =
+          Date.now();
+
+        if (
+          now -
+            lastActivityUpdate <
+          10000
+        ) {
+          return;
+        }
+
+        lastActivityUpdate =
+          now;
+
+        sessionStorage.setItem(
+          '_core_last_activity',
+          now.toString()
+        );
+      };
 
     const handleVisibility =
       () => {
@@ -264,83 +367,83 @@ function MonitorInternal() {
           document.visibilityState ===
           'hidden'
         ) {
-          const duration =
+          activeTimeRef.current +=
             Date.now() -
-            pageStartRef.current;
+            activeStartRef.current;
 
           trackCustomEvent(
             'page_hidden',
             {
-              duration_ms:
-                duration,
-
-              max_scroll:
-                maxScrollRef.current,
+              active_time_ms:
+                activeTimeRef.current,
             }
+          );
+        }
+
+        if (
+          document.visibilityState ===
+          'visible'
+        ) {
+          activeStartRef.current =
+            Date.now();
+
+          trackCustomEvent(
+            'page_visible'
           );
         }
       };
 
-    const handleScroll = () => {
-      const docHeight =
-        document.documentElement
-          .scrollHeight -
-        window.innerHeight;
+    const handleScroll =
+      () => {
+        const docHeight =
+          document
+            .documentElement
+            .scrollHeight -
+          window.innerHeight;
 
-      if (docHeight <= 0) {
-        return;
-      }
+        if (
+          docHeight <= 0
+        ) {
+          return;
+        }
 
-      const scrollPercent =
-        Math.round(
-          (window.scrollY /
-            docHeight) *
-            100
-        );
+        const scrollPercent =
+          Math.round(
+            (window.scrollY /
+              docHeight) *
+              100
+          );
 
-      if (
-        scrollPercent >
-        maxScrollRef.current
-      ) {
-        maxScrollRef.current =
-          scrollPercent;
-      }
+        if (
+          scrollPercent >
+          maxScrollRef.current
+        ) {
+          maxScrollRef.current =
+            scrollPercent;
+        }
 
-      if (
-        scrollPercent >= 25 &&
-        scrollPercent < 50
-      ) {
-        trackCustomEvent(
-          'scroll_25'
-        );
-      }
+        const milestones =
+          [25, 50, 75, 100];
 
-      if (
-        scrollPercent >= 50 &&
-        scrollPercent < 75
-      ) {
-        trackCustomEvent(
-          'scroll_50'
-        );
-      }
+        for (const m of milestones) {
+          if (
+            scrollPercent >=
+              m &&
+            !scrollMilestonesRef
+              .current[
+              m as keyof typeof scrollMilestonesRef.current
+            ]
+          ) {
+            scrollMilestonesRef.current[
+              m as keyof typeof scrollMilestonesRef.current
+            ] = true;
 
-      if (
-        scrollPercent >= 75 &&
-        scrollPercent < 100
-      ) {
-        trackCustomEvent(
-          'scroll_75'
-        );
-      }
-
-      if (
-        scrollPercent >= 100
-      ) {
-        trackCustomEvent(
-          'scroll_100'
-        );
-      }
-    };
+            trackCustomEvent(
+              `scroll_${m}`
+            );
+          }
+        }
+      };
 
     document.addEventListener(
       'visibilitychange',
@@ -350,7 +453,9 @@ function MonitorInternal() {
     window.addEventListener(
       'scroll',
       handleScroll,
-      { passive: true }
+      {
+        passive: true,
+      }
     );
 
     window.addEventListener(
@@ -408,7 +513,8 @@ function MonitorInternal() {
 
   useEffect(() => {
     if (
-      typeof window === 'undefined'
+      typeof window ===
+      'undefined'
     ) {
       return;
     }
@@ -424,42 +530,57 @@ function MonitorInternal() {
       return;
     }
 
-    const timer = setTimeout(() => {
-      trackCustomEvent(
-        'performance_metrics',
-        {
-          dns:
-            Math.round(
+    const timer =
+      setTimeout(() => {
+        const memory =
+          (
+            performance as any
+          )?.memory;
+
+        trackCustomEvent(
+          'performance_metrics',
+          {
+            dns: Math.round(
               nav.domainLookupEnd -
                 nav.domainLookupStart
             ),
 
-          tcp:
-            Math.round(
+            tcp: Math.round(
               nav.connectEnd -
                 nav.connectStart
             ),
 
-          ttfb:
-            Math.round(
+            ttfb: Math.round(
               nav.responseStart -
                 nav.requestStart
             ),
 
-          dom_loaded:
-            Math.round(
-              nav.domContentLoadedEventEnd -
-                nav.startTime
-            ),
+            dom_loaded:
+              Math.round(
+                nav.domContentLoadedEventEnd -
+                  nav.startTime
+              ),
 
-          page_loaded:
-            Math.round(
-              nav.loadEventEnd -
-                nav.startTime
-            ),
-        }
-      );
-    }, 3000);
+            page_loaded:
+              Math.round(
+                nav.loadEventEnd -
+                  nav.startTime
+              ),
+
+            memory_used:
+              memory?.usedJSHeapSize ||
+              null,
+
+            memory_total:
+              memory?.totalJSHeapSize ||
+              null,
+
+            memory_limit:
+              memory?.jsHeapSizeLimit ||
+              null,
+          }
+        );
+      }, 3000);
 
     return () =>
       clearTimeout(timer);
