@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 // Google Analytics GA4 Measurement Protocol Bilgileri
 const GA_MEASUREMENT_ID = 'G-JEB7YLM2RV'; // Kendi G- kodun
-const GA_API_SECRET = 'YOUR_API_SECRET_FROM_GA_PANEL'; // GA4 > Veri Akışları > Ölçüm Protokolü API gizli anahtarı
+const GA_API_SECRET = 'mC0GamSQR5m2VYLSPc0t5Q'; // GA4 > Veri Akışları > Ölçüm Protokolü API gizli anahtarı
 
 export async function POST(request: Request) {
   try {
