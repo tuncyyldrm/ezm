@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
-import Script from "next/script"; // 💡 Hata almamak için Script importunu ekledik
+import Script from "next/script";
 import "./globals.css";
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -109,9 +109,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* 🚀 Garanti İzleme Stratejisi: Çift saymayı önlemek için @next/third-parties kaldırıldı */}
+        {/* 🚀 Eklentileri Atlatan Maskelenmiş Script Linkleri */}
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-JEB7YLM2RV"
+          src="/analiz-sistemi/gtag/js?id=G-JEB7YLM2RV"
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -119,9 +119,13 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
+            
+            // Verilerin toplanma adresini kendi oluşturduğumuz proxy'e (/analiz-veri) yönlendiriyoruz
             gtag('config', 'G-JEB7YLM2RV', {
               page_path: window.location.pathname,
-              send_page_view: true // App Router altındaki soft navigasyon geçişlerini zorunlu tetikler
+              transport_url: '/analiz-veri',
+              first_party_collection: true,
+              send_page_view: true
             });
           `}
         </Script>
