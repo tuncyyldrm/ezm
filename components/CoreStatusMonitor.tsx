@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
 const getOrCreateId = (key: string) => {
   if (typeof window === 'undefined') return '';
@@ -36,7 +36,8 @@ export const trackCustomEvent = (eventName: string, customParams: Record<string,
   }).catch(() => {});
 };
 
-export default function CoreStatusMonitor() {
+// Next.js derleyicisini (Build) patlatmamak için asıl mantığı buraya alıyoruz
+function MonitorInternal() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -56,4 +57,13 @@ export default function CoreStatusMonitor() {
   }, [pathname, searchParams]);
 
   return null;
+}
+
+// Dışarıya aktardığımız ana bileşeni Suspense ile sarmallıyoruz
+export default function CoreStatusMonitor() {
+  return (
+    <Suspense fallback={null}>
+      <MonitorInternal />
+    </Suspense>
+  );
 }
