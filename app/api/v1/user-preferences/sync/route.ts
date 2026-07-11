@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
 const GA_API_SECRET = process.env.GA_API_SECRET;
 
-const DEBUG_GA = true;
+const DEBUG_GA = false;
 
 const BOT_REGEX =
   /bot|crawler|spider|crawl|GPTBot|ClaudeBot|AhrefsBot|SemrushBot|YandexBot|bingbot|Googlebot/i;
@@ -238,16 +238,14 @@ export async function POST(request: Request) {
           ? contextId
           : '/';
     }
-
+    function generateClientId() {
+      return `${Math.floor(Math.random() * 1000000000)}.${Date.now()}`;
+    }
     const gaPayload: any = {
       client_id:
         typeof uid === 'string' && uid
           ? uid
-          : crypto.randomUUID(),
-
-      ...(clientIp && {
-        ip_override: clientIp,
-      }),
+          : generateClientId(),
 
       user_properties: {
         language: {
@@ -271,12 +269,15 @@ export async function POST(request: Request) {
           name: eventName,
 
           params: {
+            ...restParams,
+
             page_location:
               typeof contextId === 'string'
                 ? contextId
                 : '',
 
-            page_path: pagePath,
+            page_path:
+              pagePath,
 
             page_title:
               typeof viewLabel === 'string'
@@ -308,10 +309,6 @@ export async function POST(request: Request) {
             timezone:
               timezone || '',
 
-            country: geo.country,
-            region: geo.region,
-            city: geo.city,
-
             device_type:
               restParams.deviceType || '',
 
@@ -319,11 +316,19 @@ export async function POST(request: Request) {
               restParams.viewport || '',
 
             traffic_type:
-              'server_side',
+              'server',
 
             ...campaignParams,
 
-            ...restParams,
+            // Server Geo bilgisi en son gelmeli
+            country:
+              geo.country || '',
+
+            region:
+              geo.region || '',
+
+            city:
+              geo.city || '',
           },
         },
       ],
