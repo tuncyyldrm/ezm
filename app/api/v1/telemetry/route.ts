@@ -5,15 +5,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { page_path, title } = body;
 
-    // Google Analytics v4 Ölçüm Protokolü (Measurement Protocol) URL'i
-    // Bu URL sunucular arası çalıştığı için AdBlocker burayı göremez bile.
+    // 1. Bilgilerini buraya güvenle yaz (Burası sunucu tarafı, tarayıcıda asla görünmez)
     const GA_MEASUREMENT_ID = 'G-JEB7YLM2RV';
-    
-    // API Secret oluşturmadıysan sadece Measurement ID ile de basit verileri gönderebilirsin
-    const googleUrl = `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}`;
+    const GA_API_SECRET = 'PANELDEN_ALDIGIN_API_SECRET_BURAYA'; 
 
-    // Rastgele veya kullanıcıya özel benzersiz bir Client ID üretelim (GA için zorunludur)
-    const clientId = req.cookies.get('ga_client_id')?.value || crypto.randomUUID();
+    // 2. Google sunucularına giden URL'e api_secret parametresini ekliyoruz
+    const googleUrl = `https://www.google-analytics.com/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`;
+
+    // 3. Mevcut cookie'yi kontrol et veya yeni üret
+    let clientId = req.cookies.get('ga_client_id')?.value;
+    if (!clientId) {
+      clientId = crypto.randomUUID();
+    }
 
     const payload = {
       client_id: clientId,
@@ -28,15 +31,13 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    // Google Sunucularına el sıkışarak veriyi gönderiyoruz
+    // Sunucudan Google'a güvenli gönderim
     await fetch(googleUrl, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
     const response = NextResponse.json({ success: true });
-    
-    // Kullanıcıyı takip edebilmek için client_id'yi cookie olarak saklayalım
     response.cookies.set('ga_client_id', clientId, { maxAge: 60 * 60 * 24 * 365 });
     return response;
   } catch (error) {
