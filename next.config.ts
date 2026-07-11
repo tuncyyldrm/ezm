@@ -4,14 +4,15 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        // GTM script dosyasını (gtm.js) çekmek için proxy
-        source: '/analiz-sistemi/:path*',
-        destination: 'https://www.googletagmanager.com/:path*',
+        // Google script kütüphanesini maskeli isimle çekiyoruz
+        source: '/assets/js/core-system.js',
+        destination: 'https://www.googletagmanager.com/gtag/js', 
       },
       {
-        // GA4 veri gönderme (collect) isteklerini yönlendirmek için proxy
-        source: '/analiz-veri/:path*',
-        destination: 'https://www.google-analytics.com/:path*',
+        // AdBlocker'ların asla şüphelenmeyeceği bir isim
+        // Gelen tüm parametreleri (?) arka planda sansürsüz Google'a paslıyoruz
+        source: '/api/v1/internal-status',
+        destination: 'https://www.google-analytics.com/g/collect',
       },
     ];
   },

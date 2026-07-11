@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
 import ScrollToTop from "@/components/ScrollToTop";
+import AnalyticsProvider from '@/components/AnalyticsProvider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -109,26 +110,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* 🚀 Eklentileri Atlatan Maskelenmiş Script Linkleri */}
-        <Script
-          src="/analiz-sistemi/gtag/js?id=G-JEB7YLM2RV"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            
-            // Verilerin toplanma adresini kendi oluşturduğumuz proxy'e (/analiz-veri) yönlendiriyoruz
-            gtag('config', 'G-JEB7YLM2RV', {
-              page_path: window.location.pathname,
-              transport_url: '/analiz-veri',
-              first_party_collection: true,
-              send_page_view: true
-            });
-          `}
-        </Script>
+
         
         <link rel="preconnect" href="https://erntysmhwfxkrtegirds.supabase.co" />
         <link rel="dns-prefetch" href="https://erntysmhwfxkrtegirds.supabase.co" />
@@ -172,6 +154,7 @@ export default function RootLayout({
         </header>
 
         <main id="main-content" className="flex-1">
+          
           {children}
         </main>
 
@@ -198,6 +181,7 @@ export default function RootLayout({
           </div>
         </footer>
         <ScrollToTop />
+        <AnalyticsProvider />
       </body>
     </html>
   );
