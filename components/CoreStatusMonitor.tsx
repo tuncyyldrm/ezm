@@ -1,12 +1,29 @@
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import {
+  Suspense,
+  useEffect,
+  useRef,
+} from 'react';
 
-const SESSION_TIMEOUT = 30 * 60 * 1000;
+import {
+  usePathname,
+  useSearchParams,
+} from 'next/navigation';
+
+
+const SESSION_TIMEOUT =
+  30 * 60 * 1000;
+
+
 
 function hasConsent(): boolean {
-  if (typeof window === 'undefined') return false;
+
+  if (
+    typeof window === 'undefined'
+  ) {
+    return false;
+  }
 
   return (
     localStorage.getItem(
@@ -15,78 +32,127 @@ function hasConsent(): boolean {
   );
 }
 
+
+
+function createUUID(){
+
+  if(
+    typeof crypto !== 'undefined' &&
+    crypto.randomUUID
+  ){
+    return crypto.randomUUID();
+  }
+
+
+  return (
+    Math.random()
+      .toString(36)
+      .substring(2)
+    +
+    Date.now()
+  );
+}
+
+
+
+
 function getDeviceType():
-  | 'mobile'
-  | 'tablet'
-  | 'desktop' {
-  if (typeof navigator === 'undefined') {
+'mobile'
+|
+'tablet'
+|
+'desktop'
+{
+
+  if(
+    typeof navigator === 'undefined'
+  ){
     return 'desktop';
   }
 
-  const ua = navigator.userAgent;
 
-  if (
-    /ipad|tablet|playbook|silk/i.test(
-      ua
-    )
-  ) {
+  const ua =
+    navigator.userAgent.toLowerCase();
+
+
+
+  if(
+    /ipad|tablet|playbook|silk/
+    .test(ua)
+  ){
     return 'tablet';
   }
 
-  if (
-    /android|iphone|ipod|mobile/i.test(
-      ua
-    )
-  ) {
+
+
+  if(
+    /android|iphone|ipod|mobile/
+    .test(ua)
+  ){
     return 'mobile';
   }
+
 
   return 'desktop';
 }
 
+
+
+
+
 function getPageType(
-  pathname: string
-): string {
-  if (pathname === '/') {
+  pathname:string
+){
+
+  if(
+    pathname === '/'
+  ){
     return 'home';
   }
 
-  if (
+
+  if(
     pathname.startsWith('/product/')
-  ) {
+  ){
     return 'product';
   }
 
-  if (
+
+  if(
     pathname.startsWith('/admin')
-  ) {
+  ){
     return 'admin';
   }
 
-  if (
-    pathname.startsWith('/api')
-  ) {
-    return 'api';
-  }
 
   return 'category';
 }
 
+
+
+
+
 function getOrCreateId(
-  key: string
-): string {
-  if (
-    typeof window === 'undefined' ||
+  key:string
+){
+
+  if(
     !hasConsent()
-  ) {
+  ){
     return '';
   }
+
 
   let id =
     localStorage.getItem(key);
 
-  if (!id) {
-    id = crypto.randomUUID();
+
+
+  if(!id){
+
+    id =
+      createUUID();
+
 
     localStorage.setItem(
       key,
@@ -94,46 +160,68 @@ function getOrCreateId(
     );
   }
 
+
   return id;
 }
 
-function getVisitorType():
-  | 'new'
-  | 'returning' {
-  const firstVisit =
-    localStorage.getItem(
-      '_core_first_visit'
-    );
 
-  if (!firstVisit) {
+
+
+
+function getVisitorType(){
+
+  const key =
+    '_core_first_visit';
+
+
+
+  const first =
+    localStorage.getItem(key);
+
+
+
+  if(!first){
+
     localStorage.setItem(
-      '_core_first_visit',
+      key,
       Date.now().toString()
     );
+
 
     return 'new';
   }
 
+
   return 'returning';
 }
 
-function getOrCreateSession(): {
-  sid: string;
-  sessionCount: number;
-} {
-  const now = Date.now();
 
-  const lastActivity =
+
+
+
+function getOrCreateSession(){
+
+
+  const now =
+    Date.now();
+
+
+
+  const last =
     Number(
       sessionStorage.getItem(
         '_core_last_activity'
       )
     ) || 0;
 
+
+
   let sid =
     sessionStorage.getItem(
       '_core_sid'
     );
+
+
 
   let sessionCount =
     Number(
@@ -142,412 +230,575 @@ function getOrCreateSession(): {
       )
     ) || 0;
 
-  if (
+
+
+  if(
     !sid ||
-    now - lastActivity >
-      SESSION_TIMEOUT
-  ) {
-    sid = Math.floor(
-      now / 1000
-    ).toString();
+    now - last > SESSION_TIMEOUT
+  ){
+
+    sid =
+      Math.floor(
+        now / 1000
+      )
+      .toString();
+
+
+
+    sessionCount++;
+
 
     sessionStorage.setItem(
       '_core_sid',
       sid
     );
 
-    sessionStorage.setItem(
-      '_core_session_start',
-      now.toString()
-    );
-
-    sessionCount++;
 
     localStorage.setItem(
       '_core_session_count',
       sessionCount.toString()
     );
+
   }
+
+
 
   sessionStorage.setItem(
     '_core_last_activity',
     now.toString()
   );
 
+
+
   return {
     sid,
-    sessionCount,
+    sessionCount
   };
 }
 
+
+
+
+
+
 function sendAnalytics(
-  payload: Record<string, any>
-) {
-  try {
-    const blob = new Blob(
-      [JSON.stringify(payload)],
-      {
-        type: 'application/json',
-      }
-    );
-
-    if (
-      navigator.sendBeacon
-    ) {
-      navigator.sendBeacon(
-        '/api/v1/user-preferences/sync',
-        blob
-      );
-
-      return;
-    }
-  } catch {}
+  payload:Record<string,any>
+){
 
   fetch(
     '/api/v1/user-preferences/sync',
     {
-      method: 'POST',
-      headers: {
+      method:'POST',
+
+      headers:{
         'Content-Type':
-          'application/json',
+          'application/json'
       },
-      body: JSON.stringify(
-        payload
-      ),
-      keepalive: true,
+
+      body:
+        JSON.stringify(payload),
+
+      keepalive:true
     }
-  ).catch(() => {});
+  )
+  .catch(()=>{
+    // sessiz geç
+  });
+
 }
 
+
+
+
+
+
 export function trackCustomEvent(
-  eventName: string,
-  customParams: Record<
-    string,
-    any
-  > = {}
-) {
-  if (
-    typeof window === 'undefined' ||
+  eventName:string,
+  customParams:
+  Record<string,any>={}
+){
+
+  if(
+    typeof window === 'undefined'
+    ||
     !hasConsent()
-  ) {
+  ){
     return;
   }
 
-  const uid =
-    localStorage.getItem(
-      '_core_uid'
-    ) || '';
+
 
   const session =
     getOrCreateSession();
 
-  const connection = (
-    navigator as any
-  )?.connection;
+
+
+  const uid =
+    getOrCreateId(
+      '_core_uid'
+    );
+
+
+
+  const connection =
+    (navigator as any)
+      ?.connection;
+
+
 
   sendAnalytics({
+
     eventName,
+
 
     contextId:
       window.location.href,
 
+
     viewLabel:
       document.title,
 
+
     uid,
 
-    sid: session.sid,
 
-    timestamp:
-      Date.now(),
+    sid:
+      session.sid,
+
 
     language:
       navigator.language,
 
+
     timezone:
       Intl.DateTimeFormat()
-        .resolvedOptions()
-        .timeZone,
+      .resolvedOptions()
+      .timeZone,
+
 
     referrer:
       document.referrer ||
       '$direct',
 
+
+
     deviceType:
       getDeviceType(),
+
+
 
     pageType:
       getPageType(
         window.location.pathname
       ),
 
+
+
     visitorType:
       getVisitorType(),
+
+
 
     sessionCount:
       session.sessionCount,
 
+
+
     screenResolution:
       `${window.screen.width}x${window.screen.height}`,
+
+
 
     viewport:
       `${window.innerWidth}x${window.innerHeight}`,
 
+
+
     userAgent:
       navigator.userAgent,
 
+
+
     networkType:
-      connection
-        ?.effectiveType || '',
+      connection?.effectiveType || '',
+
+
 
     downlink:
-      connection?.downlink ||
-      null,
+      connection?.downlink || null,
+
+
 
     rtt:
-      connection?.rtt ||
-      null,
+      connection?.rtt || null,
 
-    ...customParams,
+
+
+    engagement_time_msec:
+      customParams.engagement_time_msec
+      ||
+      100,
+
+
+
+    ...customParams
+
   });
+
 }
 
-function MonitorInternal() {
+
+
+
+
+
+function MonitorInternal(){
+
   const pathname =
     usePathname();
+
 
   const searchParams =
     useSearchParams();
 
-  const pageStartRef =
+
+
+  const pageStart =
     useRef(Date.now());
 
-  const activeStartRef =
+
+
+  const activeStart =
     useRef(Date.now());
 
-  const activeTimeRef =
+
+
+  const activeTime =
     useRef(0);
 
-  const maxScrollRef =
+
+
+  const maxScroll =
     useRef(0);
 
-  const pageViewSentRef =
+
+
+  const sentLeave =
     useRef(false);
 
-  const leavingRef =
-    useRef(false);
 
-  const milestonesRef =
+
+  const scrollMarks =
     useRef(
       new Set<number>()
     );
 
-  useEffect(() => {
-    if (!hasConsent()) {
+
+
+
+
+  useEffect(()=>{
+
+
+    if(
+      !hasConsent()
+    ){
       return;
     }
 
-    getOrCreateId(
-      '_core_uid'
-    );
 
-    getOrCreateSession();
 
-    pageStartRef.current =
+    pageStart.current =
       Date.now();
 
-    activeStartRef.current =
+
+    activeStart.current =
       Date.now();
 
-    activeTimeRef.current = 0;
 
-    maxScrollRef.current = 0;
+    activeTime.current =
+      0;
 
-    milestonesRef.current.clear();
 
-    pageViewSentRef.current =
+    maxScroll.current =
+      0;
+
+
+    sentLeave.current =
       false;
 
-    leavingRef.current = false;
 
-    const timer =
-      setTimeout(() => {
-        if (
-          pageViewSentRef.current
-        ) {
-          return;
-        }
+    scrollMarks.current.clear();
 
-        pageViewSentRef.current =
-          true;
 
-        trackCustomEvent(
-          'page_view'
-        );
-      }, 150);
+
+
+    trackCustomEvent(
+      'page_view',
+      {
+        engagement_time_msec:100
+      }
+    );
+
+
+
+
 
     const sendLeave =
-      () => {
-        if (
-          leavingRef.current
-        ) {
+      ()=>{
+
+
+        if(
+          sentLeave.current
+        ){
           return;
         }
 
-        leavingRef.current =
+
+
+        sentLeave.current =
           true;
 
-        activeTimeRef.current +=
-          Date.now() -
-          activeStartRef.current;
+
+
+        activeTime.current +=
+          Date.now()
+          -
+          activeStart.current;
+
+
 
         trackCustomEvent(
           'page_leave',
           {
-            duration_ms:
-              Date.now() -
-              pageStartRef.current,
 
-            active_time_ms:
-              activeTimeRef.current,
+            duration_ms:
+              Date.now()
+              -
+              pageStart.current,
+
+
+            engagement_time_msec:
+              activeTime.current,
+
 
             max_scroll:
-              maxScrollRef.current,
+              maxScroll.current
+
           }
         );
+
       };
+
+
+
 
     window.addEventListener(
       'beforeunload',
       sendLeave
     );
 
-    return () => {
-      clearTimeout(timer);
+
+
+
+    return()=>{
 
       window.removeEventListener(
         'beforeunload',
         sendLeave
       );
 
-      sendLeave();
-    };
-  }, [pathname, searchParams]);
 
-  useEffect(() => {
-    if (!hasConsent()) {
+      sendLeave();
+
+    };
+
+
+  },[
+    pathname,
+    searchParams
+  ]);
+
+
+
+
+
+
+
+  useEffect(()=>{
+
+
+    if(
+      !hasConsent()
+    ){
       return;
     }
 
-    const handleVisibility =
-      () => {
-        if (
+
+
+    const visibilityHandler =
+      ()=>{
+
+
+        if(
           document.visibilityState ===
           'hidden'
-        ) {
-          activeTimeRef.current +=
-            Date.now() -
-            activeStartRef.current;
+        ){
+
+          activeTime.current +=
+            Date.now()
+            -
+            activeStart.current;
+
 
           trackCustomEvent(
             'page_hidden',
             {
-              active_time_ms:
-                activeTimeRef.current,
+              engagement_time_msec:
+                activeTime.current
             }
           );
+
+        }
+        else{
+
+          activeStart.current =
+            Date.now();
+
         }
 
-        if (
-          document.visibilityState ===
-          'visible'
-        ) {
-          activeStartRef.current =
-            Date.now();
-        }
       };
 
-    const handleScroll =
-      () => {
-        const docHeight =
-          document
-            .documentElement
-            .scrollHeight -
+
+
+
+
+    const scrollHandler =
+      ()=>{
+
+
+        const height =
+          document.documentElement
+          .scrollHeight
+          -
           window.innerHeight;
 
-        if (
-          docHeight <= 0
-        ) {
+
+
+        if(
+          height <= 0
+        ){
           return;
         }
 
+
+
         const percent =
           Math.round(
-            (window.scrollY /
-              docHeight) *
-              100
+            window.scrollY /
+            height *
+            100
           );
 
-        if (
-          percent >
-          maxScrollRef.current
-        ) {
-          maxScrollRef.current =
-            percent;
-        }
 
-        [25, 50, 75, 100]
-          .filter(
-            (m) =>
-              percent >= m &&
-              !milestonesRef.current.has(
-                m
-              )
-          )
-          .forEach((m) => {
-            milestonesRef.current.add(
-              m
-            );
 
-            trackCustomEvent(
-              `scroll_${m}`
-            );
-          });
+        maxScroll.current =
+          Math.max(
+            maxScroll.current,
+            percent
+          );
+
+
+
+        [25,50,75,100]
+        .forEach(
+          level=>{
+
+
+            if(
+              percent >= level
+              &&
+              !scrollMarks.current.has(level)
+            ){
+
+              scrollMarks.current.add(level);
+
+
+              trackCustomEvent(
+                `scroll_${level}`
+              );
+
+            }
+
+          }
+        );
+
       };
+
+
+
 
     document.addEventListener(
       'visibilitychange',
-      handleVisibility
+      visibilityHandler
     );
+
+
 
     window.addEventListener(
       'scroll',
-      handleScroll,
+      scrollHandler,
       {
-        passive: true,
+        passive:true
       }
     );
 
-    return () => {
+
+
+
+    return()=>{
+
+
       document.removeEventListener(
         'visibilitychange',
-        handleVisibility
+        visibilityHandler
       );
+
 
       window.removeEventListener(
         'scroll',
-        handleScroll
+        scrollHandler
       );
+
     };
-  }, []);
+
+
+  },[]);
+
+
 
   return null;
+
 }
 
-export default function CoreStatusMonitor() {
+
+
+
+
+
+
+export default function CoreStatusMonitor(){
+
   return (
-    <Suspense fallback={null}>
+
+    <Suspense
+      fallback={null}
+    >
+
       <MonitorInternal />
+
     </Suspense>
+
   );
+
 }

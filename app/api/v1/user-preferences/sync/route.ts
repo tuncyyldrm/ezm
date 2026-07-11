@@ -12,6 +12,11 @@ const BOT_REGEX =
 
 const MAX_EVENT_NAME_LENGTH = 40;
 
+
+function generateClientId() {
+  return `${Math.floor(Math.random() * 1000000000)}.${Date.now()}`;
+}
+
 type GeoResult = {
   country: string;
   region: string;
@@ -34,7 +39,9 @@ async function resolveGeo(ip: string): Promise<GeoResult> {
         headers: {
           Accept: 'application/json',
         },
-        cache: 'force-cache',
+        next: {
+          revalidate: 86400,
+        },
       }
     );
 
@@ -106,6 +113,9 @@ export async function POST(request: Request) {
       language,
       timezone,
       referrer,
+      engagement_time_msec,
+      deviceType,
+      viewport,
       ...restParams
     } = body || {};
 
@@ -238,9 +248,7 @@ export async function POST(request: Request) {
           ? contextId
           : '/';
     }
-    function generateClientId() {
-      return `${Math.floor(Math.random() * 1000000000)}.${Date.now()}`;
-    }
+
     const gaPayload: any = {
       client_id:
         typeof uid === 'string' && uid
@@ -253,14 +261,6 @@ export async function POST(request: Request) {
             typeof language === 'string'
               ? language
               : 'unknown',
-        },
-
-        country: {
-          value: geo.country,
-        },
-
-        city: {
-          value: geo.city,
         },
       },
 
@@ -296,9 +296,7 @@ export async function POST(request: Request) {
               ),
 
             engagement_time_msec:
-              Number(
-                restParams.engagement_time_msec
-              ) || 100,
+              Number(engagement_time_msec) || 100,
 
             screen_resolution:
               screenResolution || '',
@@ -310,13 +308,10 @@ export async function POST(request: Request) {
               timezone || '',
 
             device_type:
-              restParams.deviceType || '',
+              deviceType || '',
 
             viewport:
-              restParams.viewport || '',
-
-            traffic_type:
-              'server',
+              viewport || '',
 
             ...campaignParams,
 
@@ -356,11 +351,6 @@ export async function POST(request: Request) {
           ...(userAgent && {
             'User-Agent':
               userAgent,
-          }),
-
-          ...(clientIp && {
-            'X-Forwarded-For':
-              clientIp,
           }),
         },
         body: JSON.stringify(
