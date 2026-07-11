@@ -88,7 +88,7 @@ export default function ProductImageZoom({ sku, title, storageUrl, imageExtensio
           <img
             src={imgSrc}
             alt={title}
-            className="h-full object-contain z-10 max-h-[90vh] max-w-full select-none"
+            className="h-full object-contain z-5 max-h-[90vh] max-w-full select-none"
             onClick={(e) => e.stopPropagation()}
             loading="eager"
             onError={(e) => {
