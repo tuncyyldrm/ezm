@@ -1,23 +1,22 @@
-// components/CoreStatusMonitor.tsx (güncellenmiş kısım)
+// components/CoreStatusMonitor.tsx
 'use client';
 
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation'; // ← useSearchParams'ı kaldır
 import { useEffect, useRef, useCallback } from 'react';
 
 const ANALYTICS_ENDPOINT = '/api/v1/user-preferences/sync';
 
-// Storage anahtarları (gizlenmiş)
 const STORAGE = {
-  userId: '__ezm_s',      // session
-  lastVisit: '__ezm_v',   // last visit timestamp  
-  pageLog: '__ezm_p',     // page history
-  userType: '__ezm_t',    // user tier
-  sessionRef: '__ezm_r',  // session reference
+  userId: '__ezm_s',
+  lastVisit: '__ezm_v',
+  pageLog: '__ezm_p',
+  userType: '__ezm_t',
+  sessionRef: '__ezm_r',
 } as const;
 
 export default function CoreStatusMonitor() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  // ❌ const searchParams = useSearchParams(); // BUNU SİL
   const isInitialMount = useRef(true);
   const pageEnterTime = useRef(Date.now());
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -29,8 +28,7 @@ export default function CoreStatusMonitor() {
     try {
       let id = localStorage.getItem(STORAGE.userId);
       if (!id) {
-        // Daha güvenli random ID
-        id = 'u_' + Date.now().toString(36) + crypto.randomUUID?.().substring(0, 8) || Math.random().toString(36).substring(2, 10);
+        id = 'u_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 10);
         localStorage.setItem(STORAGE.userId, id);
       }
       return id;
@@ -39,13 +37,13 @@ export default function CoreStatusMonitor() {
     }
   }, []);
 
-  // Session ID - sessionStorage (sekme kapandığında silinir)
+  // Session ID - sessionStorage
   const getSessionRef = useCallback((): string => {
     if (typeof window === 'undefined') return '';
     
     const now = Date.now();
     const lastVisit = Number(localStorage.getItem(STORAGE.lastVisit) || 0);
-    const timeout = 30 * 60 * 1000; // 30 dakika
+    const timeout = 30 * 60 * 1000;
     
     try {
       let sessionRef = sessionStorage.getItem(STORAGE.sessionRef);
@@ -81,9 +79,8 @@ export default function CoreStatusMonitor() {
     }
   }, []);
 
-  // Analytics gönderme (güvenli)
+  // Analytics gönderme
   const sendData = useCallback(async (data: Record<string, any>) => {
-    // Önceki isteği iptal et
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -92,14 +89,12 @@ export default function CoreStatusMonitor() {
     abortControllerRef.current = controller;
     
     try {
-      // Navigator.sendBeacon (sayfa kapanırken)
       if (navigator.sendBeacon && data.meta?.action === 'page_exit') {
         const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
         navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
         return;
       }
       
-      // Normal fetch
       await fetch(ANALYTICS_ENDPOINT, {
         method: 'POST',
         headers: {
@@ -119,8 +114,8 @@ export default function CoreStatusMonitor() {
 
   // Sayfa görüntüleme tracking
   useEffect(() => {
-    const fullUrl = window.location.origin + pathname + 
-      (searchParams?.toString() ? `?${searchParams.toString()}` : '');
+    // ✅ searchParams yerine window.location.search kullan
+    const fullUrl = window.location.origin + pathname + window.location.search;
     
     const data = {
       contextId: fullUrl,
@@ -136,7 +131,6 @@ export default function CoreStatusMonitor() {
       } : undefined,
     };
     
-    // İlk yüklemede gecikmeli gönder (sayfa performansını etkilemesin)
     if (isInitialMount.current) {
       isInitialMount.current = false;
       setTimeout(() => sendData(data), 50);
@@ -146,13 +140,13 @@ export default function CoreStatusMonitor() {
     
     pageEnterTime.current = Date.now();
     
-    // Cleanup
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [pathname, searchParams, getUserId, getSessionRef, updatePageLog, sendData]);
+  }, [pathname, getUserId, getSessionRef, updatePageLog, sendData]);
+  // ✅ searchParams bağımlılığını kaldırdık
 
   // Sayfadan ayrılma
   useEffect(() => {
@@ -188,7 +182,7 @@ export default function CoreStatusMonitor() {
   return null;
 }
 
-// Export edilen yardımcı fonksiyonlar (diğer component'lerden çağırmak için)
+// Yardımcı fonksiyon
 export function sendEvent(action: string, params?: Record<string, any>) {
   if (typeof window === 'undefined') return;
   
