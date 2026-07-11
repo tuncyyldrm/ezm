@@ -253,85 +253,52 @@ export async function POST(request: Request) {
           : '/';
     }
 
-    const gaPayload: any = {
-      client_id:
-        typeof uid === 'string' && uid
-          ? uid
-          : generateClientId(),
+const gaPayload: any = {
+  client_id:
+    typeof uid === 'string' && uid
+      ? uid
+      : generateClientId(),
+  
+  // 1. ÇÖZÜM BURASI: Orijinal kullanıcı IP'sini kök dizine ekleyin
+  ...(clientIp && { client_ip: clientIp }),
 
-      user_properties: {
-        language: {
-          value:
-            typeof language === 'string'
-              ? language
-              : 'unknown',
-        },
+  user_properties: {
+    language: {
+      value:
+        typeof language === 'string'
+          ? language
+          : 'unknown',
+    },
+  },
+
+  events: [
+    {
+      name: eventName,
+      params: {
+        ...restParams,
+        page_location: typeof contextId === 'string' ? contextId : '',
+        page_path: pagePath,
+        page_title: typeof viewLabel === 'string' ? viewLabel : '',
+        page_referrer: referrer === '$direct' ? '' : referrer || '',
+        ga_session_id: Number(sid) || Math.floor(Date.now() / 1000),
+        engagement_time_msec: Number(engagement_time_msec) || 100,
+        screen_resolution: screenResolution || '',
+        browser_language: language || '',
+        timezone: timezone || '',
+        device_type: deviceType || '',
+        viewport: viewport || '',
+        ...campaignParams,
+
+        // NOT: Buradaki custom country, region, city alanları haritayı tetiklemez, 
+        // ancak raporlarda özel boyut (custom dimension) olarak kalabilir. 
+        // İsterseniz tutabilir veya silebilirsiniz.
+        country: geo.country || '',
+        region: geo.region || '',
+        city: geo.city || '',
       },
-
-      events: [
-        {
-          name: eventName,
-
-          params: {
-            ...restParams,
-
-            page_location:
-              typeof contextId === 'string'
-                ? contextId
-                : '',
-
-            page_path:
-              pagePath,
-
-            page_title:
-              typeof viewLabel === 'string'
-                ? viewLabel
-                : '',
-
-            page_referrer:
-              referrer === '$direct'
-                ? ''
-                : referrer || '',
-
-            ga_session_id:
-              Number(sid) ||
-              Math.floor(
-                Date.now() / 1000
-              ),
-
-            engagement_time_msec:
-              Number(engagement_time_msec) || 100,
-
-            screen_resolution:
-              screenResolution || '',
-
-            browser_language:
-              language || '',
-
-            timezone:
-              timezone || '',
-
-            device_type:
-              deviceType || '',
-
-            viewport:
-              viewport || '',
-
-            ...campaignParams,
-
-            // Server Geo bilgisi en son gelmeli
-            country:
-              geo.country || '',
-
-            region:
-              geo.region || '',
-
-            city:
-              geo.city || '',
-          },
-        },
-      ],
-    };
+    },
+  ],
+};
 
     const controller =
       new AbortController();
