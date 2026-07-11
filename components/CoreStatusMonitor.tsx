@@ -92,7 +92,7 @@ function getPageType(
   }
 
   if(
-    pathname.startsWith('/product/')
+    pathname.startsWith('/product/') || pathname.startsWith('/products/')
   ){
     return 'product';
   }
