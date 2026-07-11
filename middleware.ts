@@ -1,33 +1,20 @@
 // middleware.ts
+
 import { createServerClient } from '@supabase/ssr';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const pathname = request.nextUrl.pathname;
 
-  // ✅ YENİ: Auth gerekmeyen sayfaları HEMEN geç (Supabase'i başlatma bile)
-  if (
-    !pathname.startsWith('/admin') && 
-    pathname !== '/login'
-  ) {
-    return NextResponse.next();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase environment variables missing');
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // 👇 Bundan sonrası SADECE admin ve login sayfaları için çalışır
-  const supabaseUrl = 
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 
-    'https://erntysmhwfxkrtegirds.supabase.co';
-
-  const supabaseAnonKey = 
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVybnR5c21od2Z4a3J0ZWdpcmRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjkxMTUsImV4cCI6MjA5NjM0NTExNX0.LZi6sW4OVa8bLMj_et8PSxiG6LHxeY-oSB2gm696D5U';
-
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+  let response = NextResponse.next();
 
   const supabase = createServerClient(
     supabaseUrl,
@@ -39,7 +26,6 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value);
             response.cookies.set(name, value, options);
           });
         },
@@ -47,32 +33,44 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  const safeRedirect = (targetUrl: string) => {
-    const redirectResponse = NextResponse.redirect(new URL(targetUrl, request.url));
-    response.cookies.getAll().forEach((cookie) => {
-      redirectResponse.cookies.set(cookie.name, cookie.value);
-    });
-    return redirectResponse;
-  };
+  if (error) {
+    console.error('Auth Error:', error.message);
+  }
 
-  // ADMIN PANELİ KORUMASI
+  // ADMIN SAYFALARI
   if (pathname.startsWith('/admin')) {
     if (!user) {
-      return safeRedirect('/login');
+      return NextResponse.redirect(
+        new URL('/login', request.url)
+      );
     }
 
     const userRole = user.user_metadata?.role;
+
     if (userRole !== 'admin') {
-      return safeRedirect('/login?error=yetkisiz');
+      return NextResponse.redirect(
+        new URL('/login?error=yetkisiz', request.url)
+      );
     }
   }
 
-  // LOGIN SAYFASI KORUMASI
+  // LOGIN SAYFASI
   if (pathname === '/login' && user) {
     const userRole = user.user_metadata?.role;
-    return safeRedirect(userRole === 'admin' ? '/admin' : '/');
+
+    return NextResponse.redirect(
+      new URL(
+        userRole === 'admin'
+          ? '/admin'
+          : '/',
+        request.url
+      )
+    );
   }
 
   return response;
@@ -80,6 +78,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|sitemap|robots.txt).*)',
+    '/admin/:path*',
+    '/login',
   ],
 };
