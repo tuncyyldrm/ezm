@@ -1,10 +1,13 @@
 // app/api/v1/user-preferences/sync/route.ts
 import { NextResponse } from 'next/server';
 
+// Vercel'e bu API fonksiyonunun statikleştirilmemesini, tamamen dinamik kalmasını emrediyoruz
+export const dynamic = 'force-dynamic';
+
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
 const GA_API_SECRET = process.env.GA_API_SECRET;
 
-const DEBUG_GA = false; // Detaylı Google validasyon logları için true yapabilirsin
+const DEBUG_GA = false; // Detaylı çıktıları Vercel Logs'ta görmek için true yapabilirsin
 
 const BOT_REGEX =
   /bot|crawler|spider|crawl|GPTBot|ClaudeBot|AhrefsBot|SemrushBot|YandexBot|bingbot|Googlebot/i;
@@ -27,9 +30,10 @@ async function resolveGeo(ip: string): Promise<GeoResult> {
       return { country: '', region: '', city: '' };
     }
 
+    // cache: 'no-store' ekleyerek Vercel Edge'in farklı kullanıcı IP'lerini birbirine karıştırmasını engelliyoruz
     const response = await fetch(`https://ipwho.is/${ip}`, {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 86400 }, // 24 saat önbellekleme
+      cache: 'no-store',
     });
 
     if (!response.ok) {
@@ -93,33 +97,30 @@ export async function POST(request: Request) {
 
     const userAgent = request.headers.get('user-agent') || '';
 
-    // Bot isteklerini filtrele
     if (BOT_REGEX.test(userAgent)) {
       return NextResponse.json({ status: 'ignored_bot' }, { status: 200 });
     }
 
-    // 1. IP Yakalama: Vercel Edge proxy başlıklarına öncelik tanıyoruz
+    // Vercel üzerinden gelen ham IP'yi yakala
     let rawIp =
       request.headers.get('x-vercel-forwarded-for') ||
       request.headers.get('x-forwarded-for')?.split(',')[0] ||
       request.headers.get('x-real-ip') ||
       '';
 
-    // 2. Port Numarası Ayıklama: IP sonundaki ":49152" gibi port yapılarını temizliyoruz
     let clientIp = rawIp.trim();
     if (clientIp.includes(':') && !clientIp.includes('[')) {
-      // Standart IPv4 port ayıklama
       clientIp = clientIp.split(':')[0];
     }
 
-    // Vercel'in sağladığı hazır geo verileri
+    // Vercel'in kendi Edge ağında yakaladığı konum bilgileri
     let geo: GeoResult = {
       country: request.headers.get('x-vercel-ip-country') || '',
       region: request.headers.get('x-vercel-ip-country-region') || '',
       city: request.headers.get('x-vercel-ip-city') || '',
     };
 
-    // Vercel geo verisi boşsa ve geçerli bir IP varsa fallback olarak ipwho.is kullan
+    // Eğer Vercel başlıkları boş geldiyse fallback olarak dış servise git
     if (!geo.country && clientIp) {
       geo = await resolveGeo(clientIp);
     }
@@ -130,7 +131,7 @@ export async function POST(request: Request) {
     try {
       if (typeof contextId === 'string' && contextId) {
         const urlObj = new URL(contextId);
-        urlObj.searchParams.delete('_rsc'); // Next.js internal router parametresini temizle
+        urlObj.searchParams.delete('_rsc');
 
         pagePath =
           urlObj.pathname +
@@ -148,11 +149,10 @@ export async function POST(request: Request) {
       pagePath = typeof contextId === 'string' ? contextId : '/';
     }
 
-    // GA4 MP Standart Payload Şeması
     const gaPayload: any = {
       client_id: typeof uid === 'string' && uid ? uid : generateClientId(),
       
-      // GA4 Harita Çözümlemesi için kritik alan (Portsuz temiz IP)
+      // KÖK DİZİN: GA4 MP harita okuması için temizlenmiş IP'yi doğrudan buraya bağlıyoruz
       ...(clientIp && { client_ip: clientIp }),
 
       user_properties: {
@@ -165,7 +165,6 @@ export async function POST(request: Request) {
         {
           name: eventName,
           params: {
-            // Tarayıcıdan gelen ek boyutları (...restParams) buraya yayıyoruz
             ...restParams,
             page_location: typeof contextId === 'string' ? contextId : '',
             page_path: pagePath,
@@ -180,7 +179,7 @@ export async function POST(request: Request) {
             viewport: viewport || '',
             ...campaignParams,
             
-            // Coğrafi Raporlama Desteği
+            // Parametre düzeyinde coğrafya beslemesi
             country: geo.country || '',
             region: geo.region || '',
             city: geo.city || '',
@@ -202,7 +201,6 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // Tarayıcıdan taşımak yerine HTTP Header'dan alınan gerçek User-Agent
         ...(userAgent && { 'User-Agent': userAgent }),
       },
       body: JSON.stringify(gaPayload),
@@ -229,7 +227,6 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error('[Analytics] Global Critical Error:', error);
-    // İstemci tarafını engellememek için hatayı yutup sessizce kapanıyoruz
     return NextResponse.json({ status: 'idle' }, { status: 200 });
   } finally {
     if (timeoutId) {
