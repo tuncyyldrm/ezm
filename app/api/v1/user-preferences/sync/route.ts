@@ -416,21 +416,26 @@ console.log(
         status: 200,
       }
     );
-  } catch (error) {
-    console.error(
-      '[Analytics] Sync Error:',
-      error
-    );
+  } catch (error: any) {
+  console.error(
+    '[Analytics] Sync Error:',
+    error
+  );
 
-    return NextResponse.json(
-      {
-        status: 'idle',
-      },
-      {
-        status: 200,
-      }
-    );
-  } finally {
+  return NextResponse.json(
+    {
+      status: 'error',
+      message: error?.message || 'unknown',
+      stack:
+        process.env.NODE_ENV === 'development'
+          ? error?.stack
+          : undefined,
+    },
+    {
+      status: 500,
+    }
+  );
+} finally {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
