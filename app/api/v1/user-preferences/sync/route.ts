@@ -5,24 +5,81 @@ import { NextResponse } from 'next/server';
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
 const GA_API_SECRET = process.env.GA_API_SECRET;
 
+const DEBUG_GA = false;
+
 const BOT_REGEX =
   /bot|crawler|spider|crawl|GPTBot|ClaudeBot|AhrefsBot|SemrushBot|YandexBot|bingbot|Googlebot/i;
 
 const MAX_EVENT_NAME_LENGTH = 40;
 
-// Geliştirme sırasında true yapabilirsin
-const DEBUG_GA = false;
+type GeoResult = {
+  country: string;
+  region: string;
+  city: string;
+};
+
+async function resolveGeo(ip: string): Promise<GeoResult> {
+  try {
+    if (!ip) {
+      return {
+        country: '',
+        region: '',
+        city: '',
+      };
+    }
+
+    const response = await fetch(
+      `https://ipwho.is/${ip}`,
+      {
+        headers: {
+          Accept: 'application/json',
+        },
+        cache: 'force-cache',
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Geo lookup failed: ${response.status}`
+      );
+    }
+
+    const geo = await response.json();
+
+    if (!geo?.success) {
+      throw new Error('Geo lookup unsuccessful');
+    }
+
+    return {
+      country: geo.country_code || '',
+      region: geo.region_code || '',
+      city: geo.city || '',
+    };
+  } catch {
+    return {
+      country: '',
+      region: '',
+      city: '',
+    };
+  }
+}
 
 export async function POST(request: Request) {
   let timeoutId: NodeJS.Timeout | undefined;
 
   try {
     if (!GA_MEASUREMENT_ID || !GA_API_SECRET) {
-      console.error('[Analytics] Missing GA configuration');
+      console.error(
+        '[Analytics] Missing GA configuration'
+      );
 
       return NextResponse.json(
-        { status: 'analytics_disabled' },
-        { status: 500 }
+        {
+          status: 'analytics_disabled',
+        },
+        {
+          status: 500,
+        }
       );
     }
 
@@ -58,8 +115,12 @@ export async function POST(request: Request) {
       eventName.length > MAX_EVENT_NAME_LENGTH
     ) {
       return NextResponse.json(
-        { status: 'invalid_event_name' },
-        { status: 400 }
+        {
+          status: 'invalid_event_name',
+        },
+        {
+          status: 400,
+        }
       );
     }
 
@@ -68,32 +129,48 @@ export async function POST(request: Request) {
 
     if (BOT_REGEX.test(userAgent)) {
       return NextResponse.json(
-        { status: 'ignored_bot' },
-        { status: 200 }
+        {
+          status: 'ignored_bot',
+        },
+        {
+          status: 200,
+        }
       );
     }
 
     const clientIp =
+      request.headers.get('x-real-ip') ||
       request.headers
         .get('x-forwarded-for')
         ?.split(',')[0]
         ?.trim() ||
-      request.headers.get('x-real-ip') ||
       '';
 
-    // Vercel Geo
-    const country =
-      request.headers.get('x-vercel-ip-country') || '';
+    let geo = await resolveGeo(clientIp);
 
-    const region =
-      request.headers.get('x-vercel-ip-country-region') || '';
-
-    const city =
-      request.headers.get('x-vercel-ip-city') || '';
+    if (!geo.country) {
+      geo = {
+        country:
+          request.headers.get(
+            'x-vercel-ip-country'
+          ) || '',
+        region:
+          request.headers.get(
+            'x-vercel-ip-country-region'
+          ) || '',
+        city:
+          request.headers.get(
+            'x-vercel-ip-city'
+          ) || '',
+      };
+    }
 
     let pagePath = '/';
 
-    const campaignParams: Record<string, string> = {};
+    const campaignParams: Record<
+      string,
+      string
+    > = {};
 
     try {
       if (
@@ -102,46 +179,58 @@ export async function POST(request: Request) {
       ) {
         const urlObj = new URL(contextId);
 
-        // Next.js RSC temizliği
         urlObj.searchParams.delete('_rsc');
 
         pagePath =
           urlObj.pathname +
-          (
-            urlObj.searchParams.toString()
-              ? `?${urlObj.searchParams.toString()}`
-              : ''
-          );
+          (urlObj.searchParams.toString()
+            ? `?${urlObj.searchParams.toString()}`
+            : '');
 
         const utmSource =
-          urlObj.searchParams.get('utm_source');
+          urlObj.searchParams.get(
+            'utm_source'
+          );
 
         const utmMedium =
-          urlObj.searchParams.get('utm_medium');
+          urlObj.searchParams.get(
+            'utm_medium'
+          );
 
         const utmCampaign =
-          urlObj.searchParams.get('utm_campaign');
+          urlObj.searchParams.get(
+            'utm_campaign'
+          );
 
         const utmContent =
-          urlObj.searchParams.get('utm_content');
+          urlObj.searchParams.get(
+            'utm_content'
+          );
 
         const utmTerm =
-          urlObj.searchParams.get('utm_term');
+          urlObj.searchParams.get(
+            'utm_term'
+          );
 
         if (utmSource)
-          campaignParams.source = utmSource;
+          campaignParams.source =
+            utmSource;
 
         if (utmMedium)
-          campaignParams.medium = utmMedium;
+          campaignParams.medium =
+            utmMedium;
 
         if (utmCampaign)
-          campaignParams.campaign = utmCampaign;
+          campaignParams.campaign =
+            utmCampaign;
 
         if (utmContent)
-          campaignParams.content = utmContent;
+          campaignParams.content =
+            utmContent;
 
         if (utmTerm)
-          campaignParams.term = utmTerm;
+          campaignParams.term =
+            utmTerm;
       }
     } catch {
       pagePath =
@@ -160,26 +249,20 @@ export async function POST(request: Request) {
         ip_override: clientIp,
       }),
 
-      ...(country && {
-        user_location: {
-          country_id: country,
-
-          ...(region && {
-            region_id: `${country}-${region}`,
-          }),
-
-          ...(city && {
-            city,
-          }),
-        },
-      }),
-
       user_properties: {
         language: {
           value:
             typeof language === 'string'
               ? language
               : 'unknown',
+        },
+
+        country: {
+          value: geo.country,
+        },
+
+        city: {
+          value: geo.city,
         },
       },
 
@@ -207,7 +290,9 @@ export async function POST(request: Request) {
 
             ga_session_id:
               Number(sid) ||
-              Math.floor(Date.now() / 1000),
+              Math.floor(
+                Date.now() / 1000
+              ),
 
             engagement_time_msec:
               Number(
@@ -222,6 +307,19 @@ export async function POST(request: Request) {
 
             timezone:
               timezone || '',
+
+            country: geo.country,
+            region: geo.region,
+            city: geo.city,
+
+            device_type:
+              restParams.deviceType || '',
+
+            viewport:
+              restParams.viewport || '',
+
+            traffic_type:
+              'server_side',
 
             ...campaignParams,
 
@@ -247,10 +345,12 @@ export async function POST(request: Request) {
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type':
+            'application/json',
 
           ...(userAgent && {
-            'User-Agent': userAgent,
+            'User-Agent':
+              userAgent,
           }),
 
           ...(clientIp && {
@@ -266,12 +366,12 @@ export async function POST(request: Request) {
     );
 
     if (DEBUG_GA) {
-      const debugText =
+      const debugResult =
         await gaResponse.text();
 
       console.log(
         '[GA DEBUG]',
-        debugText
+        debugResult
       );
     }
 
@@ -283,8 +383,12 @@ export async function POST(request: Request) {
       );
 
       return NextResponse.json(
-        { status: 'ga_error' },
-        { status: 500 }
+        {
+          status: 'ga_error',
+        },
+        {
+          status: 500,
+        }
       );
     }
 
@@ -293,10 +397,12 @@ export async function POST(request: Request) {
         status: 'synced',
 
         geo: {
-          country,
-          region,
-          city,
+          country: geo.country,
+          region: geo.region,
+          city: geo.city,
         },
+
+        ip: clientIp,
 
         pagePath,
       },
@@ -311,8 +417,12 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json(
-      { status: 'idle' },
-      { status: 200 }
+      {
+        status: 'idle',
+      },
+      {
+        status: 200,
+      }
     );
   } finally {
     if (timeoutId) {

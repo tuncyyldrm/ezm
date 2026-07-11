@@ -15,26 +15,61 @@ function hasConsent(): boolean {
   );
 }
 
-function getDeviceType(): 'mobile' | 'tablet' | 'desktop' {
+function getDeviceType():
+  | 'mobile'
+  | 'tablet'
+  | 'desktop' {
   if (typeof navigator === 'undefined') {
     return 'desktop';
   }
 
-  const ua = navigator.userAgent.toLowerCase();
+  const ua = navigator.userAgent;
 
   if (
-    /ipad|tablet|playbook|silk/i.test(ua)
+    /ipad|tablet|playbook|silk/i.test(
+      ua
+    )
   ) {
     return 'tablet';
   }
 
   if (
-    /android|iphone|ipod|mobile/i.test(ua)
+    /android|iphone|ipod|mobile/i.test(
+      ua
+    )
   ) {
     return 'mobile';
   }
 
   return 'desktop';
+}
+
+function getPageType(
+  pathname: string
+): string {
+  if (pathname === '/') {
+    return 'home';
+  }
+
+  if (
+    pathname.startsWith('/product/')
+  ) {
+    return 'product';
+  }
+
+  if (
+    pathname.startsWith('/admin')
+  ) {
+    return 'admin';
+  }
+
+  if (
+    pathname.startsWith('/api')
+  ) {
+    return 'api';
+  }
+
+  return 'category';
 }
 
 function getOrCreateId(
@@ -62,7 +97,30 @@ function getOrCreateId(
   return id;
 }
 
-function getOrCreateSession(): string {
+function getVisitorType():
+  | 'new'
+  | 'returning' {
+  const firstVisit =
+    localStorage.getItem(
+      '_core_first_visit'
+    );
+
+  if (!firstVisit) {
+    localStorage.setItem(
+      '_core_first_visit',
+      Date.now().toString()
+    );
+
+    return 'new';
+  }
+
+  return 'returning';
+}
+
+function getOrCreateSession(): {
+  sid: string;
+  sessionCount: number;
+} {
   const now = Date.now();
 
   const lastActivity =
@@ -76,6 +134,13 @@ function getOrCreateSession(): string {
     sessionStorage.getItem(
       '_core_sid'
     );
+
+  let sessionCount =
+    Number(
+      localStorage.getItem(
+        '_core_session_count'
+      )
+    ) || 0;
 
   if (
     !sid ||
@@ -95,6 +160,13 @@ function getOrCreateSession(): string {
       '_core_session_start',
       now.toString()
     );
+
+    sessionCount++;
+
+    localStorage.setItem(
+      '_core_session_count',
+      sessionCount.toString()
+    );
   }
 
   sessionStorage.setItem(
@@ -102,7 +174,10 @@ function getOrCreateSession(): string {
     now.toString()
   );
 
-  return sid;
+  return {
+    sid,
+    sessionCount,
+  };
 }
 
 function sendAnalytics(
@@ -117,8 +192,6 @@ function sendAnalytics(
     );
 
     if (
-      typeof navigator !==
-        'undefined' &&
       navigator.sendBeacon
     ) {
       navigator.sendBeacon(
@@ -165,14 +238,14 @@ export function trackCustomEvent(
       '_core_uid'
     ) || '';
 
-  const sid =
+  const session =
     getOrCreateSession();
 
   const connection = (
     navigator as any
   )?.connection;
 
-  const payload = {
+  sendAnalytics({
     eventName,
 
     contextId:
@@ -183,7 +256,7 @@ export function trackCustomEvent(
 
     uid,
 
-    sid,
+    sid: session.sid,
 
     timestamp:
       Date.now(),
@@ -203,6 +276,17 @@ export function trackCustomEvent(
     deviceType:
       getDeviceType(),
 
+    pageType:
+      getPageType(
+        window.location.pathname
+      ),
+
+    visitorType:
+      getVisitorType(),
+
+    sessionCount:
+      session.sessionCount,
+
     screenResolution:
       `${window.screen.width}x${window.screen.height}`,
 
@@ -214,8 +298,7 @@ export function trackCustomEvent(
 
     networkType:
       connection
-        ?.effectiveType ||
-      '',
+        ?.effectiveType || '',
 
     downlink:
       connection?.downlink ||
@@ -226,9 +309,7 @@ export function trackCustomEvent(
       null,
 
     ...customParams,
-  };
-
-  sendAnalytics(payload);
+  });
 }
 
 function MonitorInternal() {
@@ -253,13 +334,13 @@ function MonitorInternal() {
   const pageViewSentRef =
     useRef(false);
 
-  const scrollMilestonesRef =
-    useRef({
-      25: false,
-      50: false,
-      75: false,
-      100: false,
-    });
+  const leavingRef =
+    useRef(false);
+
+  const milestonesRef =
+    useRef(
+      new Set<number>()
+    );
 
   useEffect(() => {
     if (!hasConsent()) {
@@ -282,16 +363,12 @@ function MonitorInternal() {
 
     maxScrollRef.current = 0;
 
+    milestonesRef.current.clear();
+
     pageViewSentRef.current =
       false;
 
-    scrollMilestonesRef.current =
-      {
-        25: false,
-        50: false,
-        75: false,
-        100: false,
-      };
+    leavingRef.current = false;
 
     const timer =
       setTimeout(() => {
@@ -309,26 +386,51 @@ function MonitorInternal() {
         );
       }, 150);
 
+    const sendLeave =
+      () => {
+        if (
+          leavingRef.current
+        ) {
+          return;
+        }
+
+        leavingRef.current =
+          true;
+
+        activeTimeRef.current +=
+          Date.now() -
+          activeStartRef.current;
+
+        trackCustomEvent(
+          'page_leave',
+          {
+            duration_ms:
+              Date.now() -
+              pageStartRef.current,
+
+            active_time_ms:
+              activeTimeRef.current,
+
+            max_scroll:
+              maxScrollRef.current,
+          }
+        );
+      };
+
+    window.addEventListener(
+      'beforeunload',
+      sendLeave
+    );
+
     return () => {
       clearTimeout(timer);
 
-      const duration =
-        Date.now() -
-        pageStartRef.current;
-
-      trackCustomEvent(
-        'page_leave',
-        {
-          duration_ms:
-            duration,
-
-          active_time_ms:
-            activeTimeRef.current,
-
-          max_scroll:
-            maxScrollRef.current,
-        }
+      window.removeEventListener(
+        'beforeunload',
+        sendLeave
       );
+
+      sendLeave();
     };
   }, [pathname, searchParams]);
 
@@ -336,30 +438,6 @@ function MonitorInternal() {
     if (!hasConsent()) {
       return;
     }
-
-    let lastActivityUpdate = 0;
-
-    const updateActivity =
-      () => {
-        const now =
-          Date.now();
-
-        if (
-          now -
-            lastActivityUpdate <
-          10000
-        ) {
-          return;
-        }
-
-        lastActivityUpdate =
-          now;
-
-        sessionStorage.setItem(
-          '_core_last_activity',
-          now.toString()
-        );
-      };
 
     const handleVisibility =
       () => {
@@ -386,10 +464,6 @@ function MonitorInternal() {
         ) {
           activeStartRef.current =
             Date.now();
-
-          trackCustomEvent(
-            'page_visible'
-          );
         }
       };
 
@@ -407,7 +481,7 @@ function MonitorInternal() {
           return;
         }
 
-        const scrollPercent =
+        const percent =
           Math.round(
             (window.scrollY /
               docHeight) *
@@ -415,34 +489,30 @@ function MonitorInternal() {
           );
 
         if (
-          scrollPercent >
+          percent >
           maxScrollRef.current
         ) {
           maxScrollRef.current =
-            scrollPercent;
+            percent;
         }
 
-        const milestones =
-          [25, 50, 75, 100];
-
-        for (const m of milestones) {
-          if (
-            scrollPercent >=
-              m &&
-            !scrollMilestonesRef
-              .current[
-              m as keyof typeof scrollMilestonesRef.current
-            ]
-          ) {
-            scrollMilestonesRef.current[
-              m as keyof typeof scrollMilestonesRef.current
-            ] = true;
+        [25, 50, 75, 100]
+          .filter(
+            (m) =>
+              percent >= m &&
+              !milestonesRef.current.has(
+                m
+              )
+          )
+          .forEach((m) => {
+            milestonesRef.current.add(
+              m
+            );
 
             trackCustomEvent(
               `scroll_${m}`
             );
-          }
-        }
+          });
       };
 
     document.addEventListener(
@@ -458,26 +528,6 @@ function MonitorInternal() {
       }
     );
 
-    window.addEventListener(
-      'mousemove',
-      updateActivity
-    );
-
-    window.addEventListener(
-      'keydown',
-      updateActivity
-    );
-
-    window.addEventListener(
-      'touchstart',
-      updateActivity
-    );
-
-    window.addEventListener(
-      'click',
-      updateActivity
-    );
-
     return () => {
       document.removeEventListener(
         'visibilitychange',
@@ -488,102 +538,7 @@ function MonitorInternal() {
         'scroll',
         handleScroll
       );
-
-      window.removeEventListener(
-        'mousemove',
-        updateActivity
-      );
-
-      window.removeEventListener(
-        'keydown',
-        updateActivity
-      );
-
-      window.removeEventListener(
-        'touchstart',
-        updateActivity
-      );
-
-      window.removeEventListener(
-        'click',
-        updateActivity
-      );
     };
-  }, []);
-
-  useEffect(() => {
-    if (
-      typeof window ===
-      'undefined'
-    ) {
-      return;
-    }
-
-    const nav =
-      performance.getEntriesByType(
-        'navigation'
-      )[0] as
-        | PerformanceNavigationTiming
-        | undefined;
-
-    if (!nav) {
-      return;
-    }
-
-    const timer =
-      setTimeout(() => {
-        const memory =
-          (
-            performance as any
-          )?.memory;
-
-        trackCustomEvent(
-          'performance_metrics',
-          {
-            dns: Math.round(
-              nav.domainLookupEnd -
-                nav.domainLookupStart
-            ),
-
-            tcp: Math.round(
-              nav.connectEnd -
-                nav.connectStart
-            ),
-
-            ttfb: Math.round(
-              nav.responseStart -
-                nav.requestStart
-            ),
-
-            dom_loaded:
-              Math.round(
-                nav.domContentLoadedEventEnd -
-                  nav.startTime
-              ),
-
-            page_loaded:
-              Math.round(
-                nav.loadEventEnd -
-                  nav.startTime
-              ),
-
-            memory_used:
-              memory?.usedJSHeapSize ||
-              null,
-
-            memory_total:
-              memory?.totalJSHeapSize ||
-              null,
-
-            memory_limit:
-              memory?.jsHeapSizeLimit ||
-              null,
-          }
-        );
-      }, 3000);
-
-    return () =>
-      clearTimeout(timer);
   }, []);
 
   return null;
