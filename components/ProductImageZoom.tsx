@@ -64,7 +64,7 @@ export default function ProductImageZoom({ sku, title, storageUrl, imageExtensio
 
       {showModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center px-0 py-16 animate-fade-in"
           onClick={closeModal}
           role="dialog"
           aria-modal="true"
