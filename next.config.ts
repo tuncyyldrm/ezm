@@ -4,14 +4,14 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        // GTM script dosyalarını çekmek için proxy
+        // GTM script dosyasını (gtm.js) çekmek için proxy
         source: '/analiz-sistemi/:path*',
         destination: 'https://www.googletagmanager.com/:path*',
       },
       {
-        // 🚀 ÇÖZÜM: Verilerin gönderildiği (collect) endpoint'i güncel Google API sunucusuna yönlendiriyoruz
+        // GA4 veri gönderme (collect) isteklerini yönlendirmek için proxy
         source: '/analiz-veri/:path*',
-        destination: 'https://analytics.google.com/:path*',
+        destination: 'https://www.google-analytics.com/:path*',
       },
     ];
   },
