@@ -374,13 +374,7 @@ export async function POST(request: Request) {
         debugResult
       );
     }
-const debugResponse =
-  await gaResponse.text();
 
-console.log(
-  '[GA DEBUG]',
-  debugResponse
-);
     if (!gaResponse.ok) {
       console.error(
         '[Analytics] GA Request Failed:',
@@ -416,26 +410,21 @@ console.log(
         status: 200,
       }
     );
-  } catch (error: any) {
-  console.error(
-    '[Analytics] Sync Error:',
-    error
-  );
+  } catch (error) {
+    console.error(
+      '[Analytics] Sync Error:',
+      error
+    );
 
-  return NextResponse.json(
-    {
-      status: 'error',
-      message: error?.message || 'unknown',
-      stack:
-        process.env.NODE_ENV === 'development'
-          ? error?.stack
-          : undefined,
-    },
-    {
-      status: 500,
-    }
-  );
-} finally {
+    return NextResponse.json(
+      {
+        status: 'idle',
+      },
+      {
+        status: 200,
+      }
+    );
+  } finally {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
