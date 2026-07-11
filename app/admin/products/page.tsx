@@ -1,164 +1,204 @@
-// app/admin/products/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const BUCKET_URL = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
-const PAGE_SIZE = 20;
+const BUCKET = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
+const SIZE = 20;
 
-const storage = {
-  get: (key: string) => typeof window !== "undefined" ? JSON.parse(sessionStorage.getItem(key) || "null") : null,
-  set: (key: string, val: any) => typeof window !== "undefined" && sessionStorage.setItem(key, JSON.stringify(val))
+const cache = {
+  get: (k: string) => { try { return JSON.parse(sessionStorage.getItem(k) || "null"); } catch { return null; } },
+  set: (k: string, v: any) => sessionStorage.setItem(k, JSON.stringify(v))
 };
 
 export default function ProductsPage() {
-  const router = useRouter();
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const { push } = useRouter();
+  const [state, setState] = useState({
+    prods: [] as any[],
+    cats: [] as any[],
+    total: 0,
+    page: 0,
+    more: true,
+    loading: true,
+    s: cache.get("ps") || "",
+    c: cache.get("pc") || "",
+    st: cache.get("pst") || "",
+    isNew: cache.get("pn") || "" // Yeni ürün filtresi
+  });
 
-  const [search, setSearch] = useState(() => storage.get("p_search") || "");
-  const [catFilter, setCatFilter] = useState(() => storage.get("p_cat") || "");
-  const [statusFilter, setStatusFilter] = useState(() => storage.get("p_status") || "");
-  const [page, setPage] = useState(() => storage.get("p_page") || 0);
+  const update = (updates: Partial<typeof state>) => setState(prev => ({ ...prev, ...updates }));
 
+  const fetchProducts = useCallback(async (pageNum: number, reset = false) => {
+    update({ loading: true });
+    
+    let query = supabase.from("products")
+      .select("*, categories(id,name), product_codes(id,code_value,code_type), product_vehicles(id,brands(name))", { count: "exact" })
+      .order("sku");
 
-  useEffect(() => {
-    storage.set("p_search", search);
-    storage.set("p_cat", catFilter);
-    storage.set("p_status", statusFilter);
-    storage.set("p_page", page);
-  }, [search, catFilter, statusFilter, page]);
+    if (state.s) query = query.or(`title.ilike.%${state.s}%,sku.ilike.%${state.s}%`);
+    if (state.c) query = query.eq("category_id", state.c);
+    if (state.st === "active") query = query.eq("is_active", true);
+    if (state.st === "passive") query = query.eq("is_active", false);
+    if (state.isNew === "new") query = query.eq("is_new", true);
+    if (state.isNew === "old") query = query.eq("is_new", false);
 
-  useEffect(() => {
-    setPage(0);
-    loadProducts(0, true);
-  }, [search, catFilter, statusFilter]);
+    const from = reset ? 0 : pageNum * SIZE;
+    const { data, count } = await query.range(from, from + SIZE - 1);
+    
+    update({
+      prods: reset ? (data || []) : [...state.prods, ...(data || [])],
+      total: count || 0,
+      more: from + SIZE < (count || 0),
+      loading: false
+    });
+  }, [state.s, state.c, state.st, state.isNew]);
 
-const loadProducts = async (pageNum: number, reset = false) => {
-    // .order() kısmını "sku" olarak güncelledik (A'dan Z'ye sıralama için ascending: true)
-    let query = supabase.from("products").select(`
-      *, categories(id, name), product_codes(id, code_value, code_type), product_vehicles(id, brands(name))
-    `, { count: "exact" }).order("sku", { ascending: true });
-
-    if (search) query = query.or(`title.ilike.%${search}%,sku.ilike.%${search}%`);
-    if (catFilter) query = query.eq("category_id", catFilter);
-    if (statusFilter === "active") query = query.eq("is_active", true);
-    if (statusFilter === "passive") query = query.eq("is_active", false);
-
-    // Eğer reset true ise sıfırıncı sayfadan başla, değilse gelen pageNum'ı kullan
-    const currentPage = reset ? 0 : pageNum;
-    const start = currentPage * PAGE_SIZE;
-    const end = (currentPage + 1) * PAGE_SIZE - 1;
-
-    const { data, count } = await query.range(start, end);
-
-    setProducts(prev => reset ? (data || []) : [...prev, ...(data || [])]);
-    setTotalCount(count || 0);
-    setHasMore((currentPage + 1) * PAGE_SIZE < (count || 0));
-
-    if (reset && data?.length) {
-      const savedScroll = storage.get("p_scroll");
-      if (savedScroll) setTimeout(() => window.scrollTo({ top: savedScroll, behavior: "instant" }), 50);
-    }
+  const deleteProduct = async (product: any) => {
+    if (!confirm(`${product.title} silinsin mi?`)) return;
+    await Promise.all([
+      supabase.storage.from("product-images").remove([`${product.sku}.jpg`]),
+      supabase.from("products").delete().eq("id", product.id)
+    ]);
+    fetchProducts(0, true);
   };
 
-  const handleDelete = async (prod: any) => {
-    if (!confirm(`${prod.title} silinsin mi?`)) return;
-    await supabase.storage.from("product-images").remove(['jpg', 'jpeg', 'png', 'webp'].map(ext => `${prod.sku}.${ext}`));
-    await supabase.from("products").delete().eq("id", prod.id);
-    loadProducts(0, true);
+  const navigate = (path: string) => {
+    cache.set("scroll", window.scrollY);
+    push(path);
   };
 
-  const navigateTo = (path: string) => {
-    storage.set("p_scroll", window.scrollY);
-    router.push(path);
+  const clearFilters = () => {
+    ["ps", "pc", "pst", "pn"].forEach(k => cache.set(k, ""));
+    update({ s: "", c: "", st: "", isNew: "", prods: [], page: 0 });
   };
 
-  const inputStyle = "px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-medium shadow-sm text-sm";
-  const thStyle = "px-6 py-3.5 text-left text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-50/70";
+  useEffect(() => { supabase.from("categories").select("id,name").order("name").then(({ data }) => update({ cats: data || [] })); }, []);
+  useEffect(() => { update({ prods: [], page: 0 }); fetchProducts(0, true); }, [state.s, state.c, state.st, state.isNew]);
+  useEffect(() => { 
+    ["ps", "pc", "pst", "pn"].forEach((k, i) => cache.set(k, [state.s, state.c, state.st, state.isNew][i])); 
+  }, [state.s, state.c, state.st, state.isNew]);
+
+  const loadMore = () => {
+    const nextPage = state.page + 1;
+    update({ page: nextPage });
+    fetchProducts(nextPage);
+  };
+
+  const inputClass = "w-full px-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm font-medium text-slate-700 transition-all";
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-12 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="flex items-center justify-between py-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ürün Listesi</h1>
-          <p className="text-slate-500 mt-1 text-sm font-medium">Parça stoklarını, referans kodlarını ve uyumlulukları yönetin</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+      <div className="max-w-7xl mx-auto px-4 py-10">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
+          <div className="flex items-center gap-3">
+            <span className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-200">📦</span>
+            <div>
+              <h1 className="text-3xl font-black text-slate-900">Ürünler</h1>
+              <p className="text-sm text-slate-500 font-medium">{state.total} ürün</p>
+            </div>
+          </div>
+          <button onClick={() => navigate("/admin/products/new")} className="px-5 py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2 text-sm">
+            <span className="text-lg">+</span> Yeni Ürün
+          </button>
         </div>
-        <button onClick={() => navigateTo("/admin/products/new")} className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-100 flex items-center gap-2 text-sm">
-          <span className="text-base">+</span> Yeni Ürün Ekle
-        </button>
-      </div>
 
-      {/* Filtre Barı */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <input type="text" placeholder="🔍 Başlık veya SKU kodu ara..." value={search} onChange={e => setSearch(e.target.value)} className={inputStyle} />
-        <select value={catFilter} onChange={e => setCatFilter(e.target.value)} className={inputStyle}>
-          <option value="">📁 Tüm Kategoriler</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={inputStyle}>
-          <option value="">📊 Tüm Durumlar</option>
-          <option value="active">🟢 Aktif Satışta</option>
-          <option value="passive">🔴 Pasif / Gizli</option>
-        </select>
-      </div>
-
-      {/* Liste Gösterimi */}
-      {products.length === 0 && !hasMore ? (
-        <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center shadow-sm">
-          <p className="text-slate-400 font-medium mb-3">Aranan kriterlere uygun ürün bulunamadı.</p>
-          <button onClick={() => { setSearch(""); setCatFilter(""); setStatusFilter(""); }} className="text-sm font-bold text-indigo-600 hover:text-indigo-700">Filtreleri Sıfırla</button>
+        {/* Filtreler */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8">
+          <input placeholder="🔍 Ara..." value={state.s} onChange={e => update({ s: e.target.value })} className={inputClass} />
+          <select value={state.c} onChange={e => update({ c: e.target.value })} className={inputClass}>
+            <option value="">📁 Tüm Kategoriler</option>
+            {state.cats.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+          </select>
+          <select value={state.st} onChange={e => update({ st: e.target.value })} className={inputClass}>
+            <option value="">📊 Tümü</option>
+            <option value="active">🟢 Aktif</option>
+            <option value="passive">🔴 Pasif</option>
+          </select>
+          <select value={state.isNew} onChange={e => update({ isNew: e.target.value })} className={inputClass}>
+            <option value="">🆕 Tüm Ürünler</option>
+            <option value="new">✨ Yeni Ürünler</option>
+            <option value="old">📦 Normal Ürünler</option>
+          </select>
         </div>
-      ) : (
-        <>
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 px-1">{products.length} / {totalCount} Ürün Listeleniyor</div>
-          
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+
+        {/* Yükleniyor */}
+        {state.loading && !state.prods.length && (
+          <div className="text-center py-20">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-4 animate-bounce">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <p className="text-slate-400 font-bold">Yükleniyor...</p>
+          </div>
+        )}
+
+        {/* Boş Durum */}
+        {!state.loading && !state.prods.length && (
+          <div className="text-center py-20 bg-white rounded-3xl border border-slate-100">
+            <span className="text-6xl block mb-4">📭</span>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">Ürün Yok</h3>
+            <p className="text-slate-500 mb-6">{state.s || state.c || state.st || state.isNew ? "Filtrelere uygun ürün bulunamadı" : "Henüz ürün eklenmemiş"}</p>
+            <button onClick={() => state.s || state.c || state.st || state.isNew ? clearFilters() : navigate("/admin/products/new")} className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700">
+              {state.s || state.c || state.st || state.isNew ? "Filtreleri Temizle" : "İlk Ürünü Ekle"}
+            </button>
+          </div>
+        )}
+
+        {/* Tablo */}
+        {!!state.prods.length && (
+          <>
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-100">{["Ürün Detayı", "SKU", "Kategori", "Uyumlu Marka", "Pin", "Durum", "İşlem"].map((h, i) => <th key={i} className={`${thStyle} ${i === 4 || i === 5 ? "text-center" : i === 6 ? "text-right" : ""}`}>{h}</th>)}</tr>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    {["Ürün", "SKU", "Kategori", "Marka", "Pin", "Durum", "Yeni", ""].map((h, i) => (
+                      <th key={i} className={`px-3 py-3 text-xs font-bold text-slate-400 uppercase tracking-wider ${i >= 4 ? "text-center" : i === 7 ? "text-right" : "text-left"}`}>{h}</th>
+                    ))}
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {products.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/60 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center shadow-inner">
-                            <img src={`${BUCKET_URL}/${p.sku}.jpg`} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; const pr = (e.target as HTMLImageElement).parentElement; if (pr) pr.innerHTML = '<span class="text-xl">📦</span>'; }} />
+                  {state.prods.map(p => (
+                    <tr key={p.id} onClick={() => navigate(`/admin/products/new?id=${p.id}`)} className="hover:bg-indigo-50/30 transition-colors cursor-pointer group">
+                      <td className="px-3 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden flex-shrink-0">
+                            <img src={`${BUCKET}/${p.sku}.jpg`} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} alt="" />
                           </div>
                           <div>
-                            <div className="font-semibold text-slate-800 text-sm">{p.title}</div>
-                            {p.product_codes?.length > 0 && (
-                              <div className="flex gap-1.5 mt-1 flex-wrap">
-                                {p.product_codes.slice(0, 2).map((c: any) => <span key={c.id} className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider">{c.code_type}: {c.code_value}</span>)}
-                              </div>
-                            )}
+                            <div className="font-bold text-sm text-slate-800 group-hover:text-indigo-700 truncate max-w-[250px]">{p.title}</div>
+                            {p.product_codes?.slice(0, 2).map((c: any) => (
+                              <span key={c.id} className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mr-1">{c.code_type}: {c.code_value}</span>
+                            ))}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap"><span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg tracking-wider">{p.sku}</span></td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-500">{p.categories?.name || "-"}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1 max-w-[200px]">
-                          {p.product_vehicles?.length ? p.product_vehicles.slice(0, 2).map((pv: any) => <span key={pv.id} className="text-[11px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-lg border border-indigo-100/50">{pv.brands?.name}</span>) : <span className="text-slate-300">-</span>}
+                      <td className="px-3 py-4"><span className="text-sm font-mono font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">{p.sku}</span></td>
+                      <td className="px-3 py-4 text-sm text-slate-600">{p.categories?.name || "-"}</td>
+                      <td className="px-3 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {p.product_vehicles?.slice(0, 2).map((v: any) => (
+                            <span key={v.id} className="text-[11px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-lg">{v.brands?.name}</span>
+                          )) || <span className="text-slate-300">-</span>}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-center text-sm font-bold text-slate-600">{p.pin_count || "0"}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${p.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${p.is_active ? "bg-emerald-500" : "bg-slate-400"}`}></span> {p.is_active ? "Aktif" : "Pasif"}
+                      <td className="px-3 py-4 text-center text-sm font-bold">{p.pin_count || 0}</td>
+                      <td className="px-3 py-4 text-center">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${p.is_active ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                          {p.is_active ? "🟢 Aktif" : "🔴 Pasif"}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => navigateTo(`/admin/products/new?id=${p.id}`)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition">✏️</button>
-                          <button onClick={() => handleDelete(p)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition">🗑️</button>
+                      <td className="px-3 py-4 text-center">
+                        {p.is_new && (
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
+                            ✨ Yeni
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-4 text-right">
+                        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => navigate(`/admin/products/new?id=${p.id}`)} className="p-2 hover:bg-indigo-50 rounded-lg text-slate-400 hover:text-indigo-600">✏️</button>
+                          <button onClick={() => deleteProduct(p)} className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500">🗑️</button>
                         </div>
                       </td>
                     </tr>
@@ -166,18 +206,17 @@ const loadProducts = async (pageNum: number, reset = false) => {
                 </tbody>
               </table>
             </div>
-          </div>
 
-          {hasMore && (
-            <div className="text-center mt-6">
-              <button onClick={() => { const n = page + 1; setPage(n); loadProducts(n); }} className="px-6 py-3 bg-white border border-slate-200 rounded-xl hover:border-indigo-500 text-slate-600 font-bold text-sm transition shadow-sm">
-                Daha Fazla Parça Yükle ({totalCount - products.length})
-              </button>
-            </div>
-          )}
-        </>
-      )}
-
+            {state.more && (
+              <div className="text-center mt-8">
+                <button onClick={loadMore} className="px-8 py-4 bg-white border-2 border-slate-200 rounded-2xl hover:border-indigo-500 font-bold text-slate-600 hover:text-indigo-700 transition-all">
+                  Daha Fazla ({state.total - state.prods.length})
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
