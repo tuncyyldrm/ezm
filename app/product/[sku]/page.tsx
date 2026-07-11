@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import ProductImage from '@/components/ProductImage';
 import SocketImage from '@/components/SocketImage';
+import ProductImageZoom from '@/components/ProductImageZoom';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
@@ -130,7 +131,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               {p.is_new && <span className="absolute top-4 left-4 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">YENİ ÜRÜN</span>}
               
               <div className="w-full flex-1 flex items-center justify-center min-h-[280px]">
-                <ProductImage sku={p.sku} title={`${p.sku} - ${p.title} ${p.categories?.name || ''}`} storageUrl={STORAGE_URL} />
+                <ProductImageZoom sku={p.sku} title={`${p.sku} - ${p.title} ${p.categories?.name || ''}`} storageUrl={STORAGE_URL} />
               </div>
 
               <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="w-full mt-3 flex items-center justify-center gap-3 px-5 py-3 bg-[#25D366] hover:bg-[#20ba56] text-white text-sm font-black rounded-xl shadow-md hover:shadow-xl transition-all duration-300 group select-none">
