@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import Script from "next/script"; // 💡 Hata almamak için Script importunu ekledik
 import "./globals.css";
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -71,7 +71,6 @@ export const metadata: Metadata = {
   category: "Otomotiv",
 };
 
-// 👑 GLOBAL SCHEMA: Google standartlarına tam uyumlu kurumsal şema yapısı
 const globalStoreSchema = {
   "@context": "https://schema.org",
   "@type": "AutoPartsStore",
@@ -84,10 +83,16 @@ const globalStoreSchema = {
   "image": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/android-chrome-512x512.png`,
   "address": {
     "@type": "PostalAddress",
-    "streetAddress": "Yedek Parça Sanayi Sitesi", // 💡 Örnek adres alanları Google uyarılarını kapatır
+    "streetAddress": "Yedek Parça Sanayi Sitesi",
     "addressLocality": "Merkez",
     "addressRegion": "Isparta",
     "addressCountry": "TR"
+  },
+  "openingHoursSpecification": {
+    "@type": "OpeningHoursSpecification",
+    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "opens": "08:30",
+    "closes": "19:00"
   }
 };
 
@@ -96,14 +101,31 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const currentYear = 2026; 
+
   return (
     <html
       lang="tr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
       <head>
-        {/* Supabase için Preconnect katmanı site hızına (LCP) doping yapar */}
+        {/* 🚀 Garanti İzleme Stratejisi: Çift saymayı önlemek için @next/third-parties kaldırıldı */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-JEB7YLM2RV"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-JEB7YLM2RV', {
+              page_path: window.location.pathname,
+              send_page_view: true // App Router altındaki soft navigasyon geçişlerini zorunlu tetikler
+            });
+          `}
+        </Script>
+        
         <link rel="preconnect" href="https://erntysmhwfxkrtegirds.supabase.co" />
         <link rel="dns-prefetch" href="https://erntysmhwfxkrtegirds.supabase.co" />
         
@@ -114,9 +136,6 @@ export default function RootLayout({
       </head>
       
       <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white">
-        {/* 💡 Google Analytics en üst seviyede sayfa geçişlerini daha sağlıklı yakalar */}
-        <GoogleAnalytics gaId="G-JEB7YLM2RV" />
-
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg"
@@ -124,7 +143,6 @@ export default function RootLayout({
           Ana içeriğe geç
         </a>
 
-        {/* 👑 SEO DOSTU HEADER NAVİGASYONU */}
         <header className="bg-white border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-white/90">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <Link 
@@ -156,9 +174,8 @@ export default function RootLayout({
         <footer className="bg-white border-t border-gray-200 mt-auto" role="contentinfo">
           <div className="max-w-7xl mx-auto px-4 py-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              {/* 💡 suppressHydrationWarning sayesinde istemci-sunucu saat farkından doğan çökmeler engellendi */}
-              <p className="text-sm text-gray-500" suppressHydrationWarning>
-                &copy; {new Date().getFullYear()} EZM OTO. Tüm hakları saklıdır.
+              <p className="text-sm text-gray-500">
+                &copy; {currentYear} EZM OTO. Tüm hakları saklıdır.
               </p>
               <div className="flex items-center gap-6">
                 <Link href="/soket" className="text-xs text-gray-400 hover:text-blue-600 transition-colors">
