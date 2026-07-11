@@ -1,11 +1,10 @@
 // app/api/v1/user-preferences/sync/route.ts
-
 import { NextResponse } from 'next/server';
 
 const GA_MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
 const GA_API_SECRET = process.env.GA_API_SECRET;
 
-const DEBUG_GA = false; // Hata ayıklama gerekirse true yapabilirsin
+const DEBUG_GA = false; // Detaylı Google validasyon logları için true yapabilirsin
 
 const BOT_REGEX =
   /bot|crawler|spider|crawl|GPTBot|ClaudeBot|AhrefsBot|SemrushBot|YandexBot|bingbot|Googlebot/i;
@@ -24,13 +23,13 @@ type GeoResult = {
 
 async function resolveGeo(ip: string): Promise<GeoResult> {
   try {
-    if (!ip) {
+    if (!ip || ip === '127.0.0.1' || ip === '::1') {
       return { country: '', region: '', city: '' };
     }
 
     const response = await fetch(`https://ipwho.is/${ip}`, {
       headers: { Accept: 'application/json' },
-      next: { revalidate: 86400 },
+      next: { revalidate: 86400 }, // 24 saat önbellekleme
     });
 
     if (!response.ok) {
@@ -65,12 +64,7 @@ export async function POST(request: Request) {
     try {
       body = await request.json();
     } catch {
-      try {
-        const text = await request.text();
-        body = text ? JSON.parse(text) : {};
-      } catch {
-        body = {};
-      }
+      return NextResponse.json({ status: 'invalid_json' }, { status: 400 });
     }
 
     const {
@@ -99,30 +93,33 @@ export async function POST(request: Request) {
 
     const userAgent = request.headers.get('user-agent') || '';
 
+    // Bot isteklerini filtrele
     if (BOT_REGEX.test(userAgent)) {
       return NextResponse.json({ status: 'ignored_bot' }, { status: 200 });
     }
 
-    // 1. DÜZELTME: Vercel üzerinde en kararlı IP başlığına öncelik veriyoruz
+    // 1. IP Yakalama: Vercel Edge proxy başlıklarına öncelik tanıyoruz
     let rawIp =
       request.headers.get('x-vercel-forwarded-for') ||
       request.headers.get('x-forwarded-for')?.split(',')[0] ||
       request.headers.get('x-real-ip') ||
       '';
 
-    // 2. DÜZELTME: IP adresinin sonundaki port numarasını (:49152 gibi) temizliyoruz
+    // 2. Port Numarası Ayıklama: IP sonundaki ":49152" gibi port yapılarını temizliyoruz
     let clientIp = rawIp.trim();
     if (clientIp.includes(':') && !clientIp.includes('[')) {
-      // Eğer IPv6 değilse ve port içeriyorsa iki noktadan sonrasını atıyoruz
+      // Standart IPv4 port ayıklama
       clientIp = clientIp.split(':')[0];
     }
 
+    // Vercel'in sağladığı hazır geo verileri
     let geo: GeoResult = {
       country: request.headers.get('x-vercel-ip-country') || '',
       region: request.headers.get('x-vercel-ip-country-region') || '',
       city: request.headers.get('x-vercel-ip-city') || '',
     };
 
+    // Vercel geo verisi boşsa ve geçerli bir IP varsa fallback olarak ipwho.is kullan
     if (!geo.country && clientIp) {
       geo = await resolveGeo(clientIp);
     }
@@ -133,7 +130,7 @@ export async function POST(request: Request) {
     try {
       if (typeof contextId === 'string' && contextId) {
         const urlObj = new URL(contextId);
-        urlObj.searchParams.delete('_rsc');
+        urlObj.searchParams.delete('_rsc'); // Next.js internal router parametresini temizle
 
         pagePath =
           urlObj.pathname +
@@ -151,10 +148,11 @@ export async function POST(request: Request) {
       pagePath = typeof contextId === 'string' ? contextId : '/';
     }
 
+    // GA4 MP Standart Payload Şeması
     const gaPayload: any = {
       client_id: typeof uid === 'string' && uid ? uid : generateClientId(),
       
-      // 3. DÜZELTME: Temizlenmiş IP'yi kök dizine ekleyerek GA4 haritasını besliyoruz
+      // GA4 Harita Çözümlemesi için kritik alan (Portsuz temiz IP)
       ...(clientIp && { client_ip: clientIp }),
 
       user_properties: {
@@ -167,6 +165,7 @@ export async function POST(request: Request) {
         {
           name: eventName,
           params: {
+            // Tarayıcıdan gelen ek boyutları (...restParams) buraya yayıyoruz
             ...restParams,
             page_location: typeof contextId === 'string' ? contextId : '',
             page_path: pagePath,
@@ -181,6 +180,7 @@ export async function POST(request: Request) {
             viewport: viewport || '',
             ...campaignParams,
             
+            // Coğrafi Raporlama Desteği
             country: geo.country || '',
             region: geo.region || '',
             city: geo.city || '',
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
     const controller = new AbortController();
     timeoutId = setTimeout(() => {
       controller.abort();
-    }, 5000);
+    }, 4500);
 
     const endpoint = DEBUG_GA
       ? `https://www.google-analytics.com/debug/mp/collect?measurement_id=${GA_MEASUREMENT_ID}&api_secret=${GA_API_SECRET}`
@@ -202,6 +202,7 @@ export async function POST(request: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // Tarayıcıdan taşımak yerine HTTP Header'dan alınan gerçek User-Agent
         ...(userAgent && { 'User-Agent': userAgent }),
       },
       body: JSON.stringify(gaPayload),
@@ -210,25 +211,25 @@ export async function POST(request: Request) {
 
     if (DEBUG_GA) {
       const debugResult = await gaResponse.text();
-      console.log('[GA DEBUG]', debugResult);
+      console.log('[GA4 DEBUG RESPONSE]', debugResult);
     }
 
     if (!gaResponse.ok) {
-      console.error('[Analytics] GA Request Failed:', gaResponse.status, gaResponse.statusText);
+      console.error('[Analytics] GA Collect Failed:', gaResponse.status);
       return NextResponse.json({ status: 'ga_error' }, { status: 500 });
     }
 
     return NextResponse.json(
       {
         status: 'synced',
-        geo: { country: geo.country, region: geo.region, city: geo.city },
         ip: clientIp,
-        pagePath,
+        geo: { country: geo.country, region: geo.region, city: geo.city },
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error('[Analytics] Sync Error:', error);
+    console.error('[Analytics] Global Critical Error:', error);
+    // İstemci tarafını engellememek için hatayı yutup sessizce kapanıyoruz
     return NextResponse.json({ status: 'idle' }, { status: 200 });
   } finally {
     if (timeoutId) {
