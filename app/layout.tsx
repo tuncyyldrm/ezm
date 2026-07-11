@@ -122,6 +122,7 @@ export default function RootLayout({
       </head>
       
       <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white">
+        
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg"
@@ -154,7 +155,7 @@ export default function RootLayout({
         </header>
 
         <main id="main-content" className="flex-1">
-          
+                  
           {children}
         </main>
 
