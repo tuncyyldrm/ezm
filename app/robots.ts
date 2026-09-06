@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin', '/login'],
     },
-    sitemap: 'https://ezmoto.vercel.app/sitemap.xml',
+    sitemap: 'https://ezmoto.com.tr/sitemap.xml',
   };
 }

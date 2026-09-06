@@ -14,7 +14,7 @@ interface ProductPageProps {
 const IMAGE_EXTENSION = 'jpg'; 
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
 const WHATSAPP = '905546588556';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.vercel.app';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.com.tr';
 
 const filterCodes = (codes: any[], type: string) =>
   (codes || []).filter(c => c.code_type === type).map(c => c.code_value);

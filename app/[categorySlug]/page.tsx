@@ -12,7 +12,7 @@ interface CategoryPageProps {
 }
 
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.vercel.app';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.com.tr';
 
 const getBaseUrl = () => SITE_URL;
 

@@ -4,7 +4,7 @@ import { categoryService, supabase } from '@/lib/supabase';
 export const revalidate = 300; // 24 saat cache
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://ezmoto.vercel.app';
+  const baseUrl = 'https://ezmoto.com.tr';
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

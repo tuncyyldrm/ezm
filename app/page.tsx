@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 const STORAGE = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
-const SITE_URL = 'https://ezmoto.vercel.app';
+const SITE_URL = 'https://ezmoto.com.tr';
 
 export default async function HomePage() {
   const [{ data: categories, error }, { count: totalProducts }] = await Promise.all([

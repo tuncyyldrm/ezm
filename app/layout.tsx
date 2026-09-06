@@ -4,8 +4,8 @@ import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
 import ScrollToTop from "@/components/ScrollToTop";
-import CoreStatusMonitor from '@/components/CoreStatusMonitor';
-import CookieBanner from '@/components/CookieBanner'; // 1. Bileşeni içe aktar
+import CoreStatusMonitor from "@/components/CoreStatusMonitor";
+import CookieBanner from "@/components/CookieBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,29 +31,48 @@ export const metadata: Metadata = {
     default: "EZM OTO - Yedek Parça Kataloğu",
     template: "%s | EZM OTO",
   },
-  description: "Oto yedek parça kataloğu. OEM numaraları, uyumlu araçlar ve detaylı ürün bilgileri. WhatsApp ile hızlı sipariş.",
-  keywords: ["oto yedek parça", "yedek parça", "OEM", "araba parçası", "otomotiv", "EZM OTO"],
+  description:
+    "Oto yedek parça kataloğu. OEM numaraları, uyumlu araçlar ve detaylı ürün bilgileri. WhatsApp ile hızlı sipariş.",
+  keywords: [
+    "oto yedek parça",
+    "yedek parça",
+    "OEM",
+    "araba parçası",
+    "otomotiv",
+    "EZM OTO",
+  ],
   authors: [{ name: "EZM OTO" }],
   creator: "EZM OTO",
   publisher: "EZM OTO",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"),
-  
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr"
+  ),
+
   openGraph: {
     type: "website",
     locale: "tr_TR",
     siteName: "EZM OTO",
     title: "EZM OTO - Yedek Parça Kataloğu",
-    description: "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
-    images: [{ url: "/android-chrome-512x512.png", width: 1200, height: 630, alt: "EZM OTO" }],
+    description:
+      "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
+    images: [
+      {
+        url: "/android-chrome-512x512.png",
+        width: 1200,
+        height: 630,
+        alt: "EZM OTO",
+      },
+    ],
   },
-  
+
   twitter: {
     card: "summary_large_image",
     title: "EZM OTO - Yedek Parça Kataloğu",
-    description: "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
+    description:
+      "Online oto yedek parça kataloğu. Özel fiyatlar ve hızlı teslimat.",
     images: ["/android-chrome-512x512.png"],
   },
-  
+
   robots: {
     index: true,
     follow: true,
@@ -64,38 +83,45 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  
+
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
-  
+
   category: "Otomotiv",
 };
 
 const globalStoreSchema = {
   "@context": "https://schema.org",
   "@type": "AutoPartsStore",
-  "@id": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/#organization`,
-  "name": "EZM OTO",
-  "description": "Oto yedek parça satış ve online katalog platformu.",
-  "url": process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app",
-  "telephone": "+905546588556",
-  "priceRange": "₺",
-  "image": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.vercel.app"}/android-chrome-512x512.png`,
-  "address": {
+  "@id": `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr"}/#organization`,
+  name: "EZM OTO",
+  description: "Oto yedek parça satış ve online katalog platformu.",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr",
+  telephone: "+905546588556",
+  priceRange: "₺",
+  image: `${process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr"}/android-chrome-512x512.png`,
+  address: {
     "@type": "PostalAddress",
-    "streetAddress": "Yedek Parça Sanayi Sitesi",
-    "addressLocality": "Merkez",
-    "addressRegion": "Isparta",
-    "addressCountry": "TR"
+    streetAddress: "Yedek Parça Sanayi Sitesi",
+    addressLocality: "Merkez",
+    addressRegion: "Isparta",
+    addressCountry: "TR",
   },
-  "openingHoursSpecification": {
+  openingHoursSpecification: {
     "@type": "OpeningHoursSpecification",
-    "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    "opens": "08:30",
-    "closes": "19:00"
-  }
+    dayOfWeek: [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ],
+    opens: "08:30",
+    closes: "19:00",
+  },
 };
 
 export default function RootLayout({
@@ -103,27 +129,28 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const currentYear = 2026; 
+  const currentYear = new Date().getFullYear();
 
   return (
     <html
       lang="tr"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
-
-        
         <link rel="preconnect" href="https://erntysmhwfxkrtegirds.supabase.co" />
         <link rel="dns-prefetch" href="https://erntysmhwfxkrtegirds.supabase.co" />
-        
+
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(globalStoreSchema) }}
         />
       </head>
-      
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white">
-        
+
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white"
+      >
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg"
@@ -133,15 +160,24 @@ export default function RootLayout({
 
         <header className="bg-white border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-white/90">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <Link 
-              href="/" 
-              title="EZM OTO Ana Sayfa" 
+            <Link
+              href="/"
+              title="EZM OTO Ana Sayfa"
               className="text-xl font-black font-mono tracking-tighter text-gray-900 hover:text-blue-600 transition-colors"
             >
               EZM <span className="text-blue-600">OTO</span>
             </Link>
-            
-            <nav className="flex items-center gap-6" aria-label="Ana Menü">
+
+            <nav className="flex items-center gap-4 sm:gap-6" aria-label="Ana Menü">
+              <Link
+                href="/hakkimizda"
+                className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                Hakkımızda
+              </Link>
+              <Link href="/iletisim" className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+                İletişim
+              </Link>
               <a
                 href="https://wa.me/905546588556"
                 target="_blank"
@@ -156,7 +192,6 @@ export default function RootLayout({
         </header>
 
         <main id="main-content" className="flex-1">
-                  
           {children}
         </main>
 
@@ -167,7 +202,19 @@ export default function RootLayout({
                 &copy; {currentYear} EZM OTO. Tüm hakları saklıdır.
               </p>
               <div className="flex items-center gap-6">
-                <Link href="/soket" className="text-xs text-gray-400 hover:text-blue-600 transition-colors">
+                <Link
+                  href="/hakkimizda"
+                  className="text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                >
+                  Hakkımızda
+                </Link>
+                <Link href="/iletisim" className="text-xs text-gray-500 hover:text-blue-600 transition-colors">
+                  İletişim
+                </Link>
+                <Link
+                  href="/soket"
+                  className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
+                >
                   Soket
                 </Link>
                 <a
@@ -176,12 +223,13 @@ export default function RootLayout({
                   rel="noopener noreferrer"
                   className="text-xs text-gray-400 hover:text-green-600 transition-colors"
                 >
-                  İletişim
+                  İletişim Hattı
                 </a>
               </div>
             </div>
           </div>
         </footer>
+
         <ScrollToTop />
         <CoreStatusMonitor />
         <CookieBanner />
