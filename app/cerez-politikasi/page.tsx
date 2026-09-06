@@ -12,7 +12,7 @@ export default function CookiePolicyPage() {
         Çerez Politikası
       </h1>
       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        Son Güncelleme: 11 Temmuz 2026
+        Son Güncelleme: 06 Eylül 2026
       </p>
 
       <hr className="my-8 border-gray-200 dark:border-gray-800" />
