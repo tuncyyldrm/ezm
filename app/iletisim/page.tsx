@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Yerel SEO için yapılandırılmış veri
+// Yerel SEO için ContactPage / LocalBusiness Schema Yapısı
 const contactSchema = {
   "@context": "https://schema.org",
   "@type": "AutoPartsStore",
@@ -59,7 +59,7 @@ const contactSchema = {
 export default function IletisimPage() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800">
-      {/* Yapılandırılmış Veri */}
+      {/* Yapılandırılmış Veri (Schema.org) */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -85,10 +85,10 @@ export default function IletisimPage() {
         </div>
       </section>
 
-      {/* İletişim Kartları */}
+      {/* İletişim Kartları & Detaylar */}
       <section className="max-w-6xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          {/* WhatsApp */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {/* WhatsApp Kartı */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
               <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl mb-4">
@@ -100,8 +100,8 @@ export default function IletisimPage() {
               </h3>
 
               <p className="text-sm text-slate-500 mb-4">
-                Parça fotoğrafı veya OEM numarasını ileterek stok ve fiyat
-                sorgulayın.
+                Parça fotoğrafı veya OEM numarasını ileterek anında stok ve
+                fiyat sorgulayın.
               </p>
             </div>
 
@@ -116,7 +116,7 @@ export default function IletisimPage() {
             </a>
           </div>
 
-          {/* Telefon */}
+          {/* Telefon Kartı */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
               <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl mb-4">
@@ -142,7 +142,7 @@ export default function IletisimPage() {
             </a>
           </div>
 
-          {/* Trendyol */}
+          {/* Trendyol Kartı */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div>
               <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl mb-4">
@@ -183,7 +183,7 @@ export default function IletisimPage() {
 
               <ul className="text-sm text-slate-600 space-y-1 mb-4">
                 <li className="flex justify-between gap-3">
-                  <span>Pzt. - Cmt.:</span>
+                  <span>Pazartesi - Cumartesi:</span>
                   <span className="font-semibold text-slate-900 whitespace-nowrap">
                     08:30 - 19:00
                   </span>
@@ -202,7 +202,7 @@ export default function IletisimPage() {
           </div>
         </div>
 
-        {/* Adres & Konum */}
+        {/* Adres & Konum Alanı */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
