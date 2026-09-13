@@ -1,20 +1,16 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export default function ScrollRestorationManager() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const query = searchParams.toString();
+    const query = window.location.search;
+    const fullUrlKey = `scroll_pos_${pathname}${query}`;
 
-    // Path + query parametrelerine göre benzersiz storage anahtarı
-    const scrollKey = `scroll_pos_${pathname}${query ? `?${query}` : ""}`;
-
-    // Daha önce kaydedilmiş scroll pozisyonunu al
-    const savedPosition = sessionStorage.getItem(scrollKey);
+    const savedPosition = sessionStorage.getItem(fullUrlKey);
 
     if (savedPosition !== null) {
       const targetY = parseInt(savedPosition, 10);
@@ -23,35 +19,31 @@ export default function ScrollRestorationManager() {
         let attempts = 0;
         const maxAttempts = 60;
 
-        // İçerik yüksekliği oluşana kadar scroll'u geri yüklemeyi bekle
         const restoreScroll = () => {
           const maxScroll =
             document.documentElement.scrollHeight - window.innerHeight;
 
-          // Sayfa hedef pozisyona ulaşabilecek kadar uzunsa
           if (maxScroll >= targetY) {
             window.scrollTo(0, targetY);
             return;
           }
 
-          // İçerik henüz yüklenmediyse beklemeye devam et
           if (attempts < maxAttempts) {
             attempts++;
-
             requestAnimationFrame(restoreScroll);
             return;
           }
 
-          // Maksimum bekleme süresi dolduysa mevcut maksimum konuma git
-          window.scrollTo(0, Math.max(0, Math.min(targetY, maxScroll)));
+          window.scrollTo(
+            0,
+            Math.max(0, Math.min(targetY, maxScroll))
+          );
         };
 
         requestAnimationFrame(restoreScroll);
       }
     }
 
-    // Scroll sırasında sessionStorage'a sürekli yazmak yerine
-    // 100 ms debounce kullanıyoruz.
     let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const handleSaveScroll = () => {
@@ -60,7 +52,11 @@ export default function ScrollRestorationManager() {
       }
 
       saveTimeout = setTimeout(() => {
-        sessionStorage.setItem(scrollKey, String(window.scrollY));
+        sessionStorage.setItem(
+          fullUrlKey,
+          String(window.scrollY)
+        );
+
         saveTimeout = null;
       }, 100);
     };
@@ -76,7 +72,7 @@ export default function ScrollRestorationManager() {
         clearTimeout(saveTimeout);
       }
     };
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return null;
 }
