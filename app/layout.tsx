@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import "./globals.css";
 import ScrollToTop from "@/components/ScrollToTop";
+import ScrollRestorationManager from "@/components/ScrollRestorationManager";
 import CoreStatusMonitor from "@/components/CoreStatusMonitor";
 import CookieBanner from "@/components/CookieBanner";
 
@@ -231,6 +232,7 @@ export default function RootLayout({
         </footer>
 
         <ScrollToTop />
+        <ScrollRestorationManager />
         <CoreStatusMonitor />
         <CookieBanner />
       </body>
