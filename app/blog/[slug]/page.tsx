@@ -27,6 +27,10 @@ async function getPost(slug: string) {
   return data;
 }
 
+function removeSiteName(title: string): string {
+  return title.replace(/(?:\s*[|–—-]\s*EZM OTO)+\s*$/i, "").trim();
+}
+
 export async function generateMetadata({
   params,
 }: Props): Promise<Metadata> {
@@ -36,14 +40,15 @@ export async function generateMetadata({
 
   if (!post) {
     return {
-      title: "Blog Yazısı | EZM OTO",
+      title: "Blog Yazısı",
     };
   }
 
+  const postTitle = removeSiteName(post.seo_title || post.title);
+  const fullTitle = `${postTitle} | EZM OTO`;
+
   return {
-    title:
-      post.seo_title ||
-      post.title,
+    title: postTitle,
 
     description:
       post.seo_description ||
@@ -55,9 +60,7 @@ export async function generateMetadata({
     },
 
     openGraph: {
-      title:
-        post.seo_title ||
-        post.title,
+      title: fullTitle,
 
       description:
         post.seo_description ||

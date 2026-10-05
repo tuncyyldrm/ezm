@@ -6,7 +6,7 @@ const BUCKET_URL =
   "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/blog-images";
 
 export const metadata = {
-  title: "Blog | EZM OTO",
+  title: "Blog",
   description:
     "Otomotiv yedek parçaları, araç bakımı, arıza belirtileri ve otomotiv dünyasından güncel bilgiler.",
 };
