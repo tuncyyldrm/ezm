@@ -9,7 +9,8 @@ import { supabase } from "@/lib/supabase";
 const menuItems = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
   { href: "/admin/products", label: "Ürünler", icon: "📦" },
-  { href: "/admin/categories", label: "Kategoriler", icon: "📁" }
+  { href: "/admin/categories", label: "Kategoriler", icon: "📁" },
+  { href: "/admin/blog", label: "Blog", icon: "📝" }
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

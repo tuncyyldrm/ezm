@@ -21,7 +21,7 @@ const SITE_URL = 'https://ezmoto.com.tr';
 
 export default async function HomePage() {
   const [{ data: categories, error }, { count: totalProducts }] = await Promise.all([
-    supabase.from('categories').select('*').is('parent_id', null).order('name'),
+    supabase.from('categories').select('*')  .is('parent_id', null)  .order('sort_order', { ascending: true }),
     supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
   ]);
 

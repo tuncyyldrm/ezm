@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
@@ -44,6 +45,7 @@ export const metadata: Metadata = {
   authors: [{ name: "EZM OTO" }],
   creator: "EZM OTO",
   publisher: "EZM OTO",
+
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr"
   ),
@@ -146,6 +148,7 @@ export default function RootLayout({
           rel="preconnect"
           href="https://erntysmhwfxkrtegirds.supabase.co"
         />
+
         <link
           rel="dns-prefetch"
           href="https://erntysmhwfxkrtegirds.supabase.co"
@@ -161,96 +164,116 @@ export default function RootLayout({
 
       <body
         suppressHydrationWarning
-        className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white"
+        className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white overflow-x-hidden"
       >
-        {/* Erişilebilirlik - Ana içeriğe geç */}
+        {/* ACCESSIBILITY */}
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg"
         >
           Ana içeriğe geç
         </a>
 
         {/* HEADER */}
-        <header className="bg-white border-b border-gray-100 sticky top-0 z-40 backdrop-blur-md bg-white/90">
-          <div className="max-w-7xl mx-auto w-full px-3 sm:px-4 min-h-16 py-2 sm:py-0 flex items-center justify-between gap-3">
-            {/* Logo */}
-            <Link
-              href="/"
-              title="EZM OTO Ana Sayfa"
-              className="shrink-0 text-lg sm:text-xl font-black font-mono tracking-tighter text-gray-900 hover:text-blue-600 transition-colors"
-            >
-              EZM <span className="text-blue-600">OTO</span>
-            </Link>
+        <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-md">
+          <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center px-3 sm:px-4 lg:px-6">
+            
+            {/* HEADER CONTENT */}
+            <div className="flex w-full min-w-0 items-center justify-between gap-2 sm:gap-4">
 
-            {/* Navigation */}
-            <nav
-              className="flex items-center gap-2 sm:gap-4 md:gap-6 min-w-0"
-              aria-label="Ana Menü"
-            >
+              {/* LOGO */}
               <Link
-                href="/hakkimizda"
-                className="shrink-0 text-xs sm:text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
+                href="/"
+                title="EZM OTO Ana Sayfa"
+                className="shrink-0 text-base font-black tracking-tighter text-gray-900 transition-colors hover:text-blue-600 sm:text-lg md:text-xl"
               >
-                Hakkımızda
+                EZM <span className="text-blue-600">OTO</span>
               </Link>
 
-              <Link
-                href="/iletisim"
-                className="shrink-0 text-xs sm:text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors whitespace-nowrap"
+              {/* NAVIGATION */}
+              <nav
+                className="flex min-w-0 items-center justify-end gap-1.5 sm:gap-3 md:gap-5 lg:gap-6"
+                aria-label="Ana Menü"
               >
-                İletişim
-              </Link>
+                <Link
+                  href="/blog"
+                  className="shrink-0 whitespace-nowrap px-1 text-[11px] font-medium text-gray-600 transition-colors hover:text-blue-600 sm:px-0 sm:text-xs md:text-sm"
+                >
+                  Blog
+                </Link>
 
-              <a
-                href="https://wa.me/905546588556"
-                target="_blank"
-                rel="noopener noreferrer"
-                title="WhatsApp Hızlı Sipariş Hattı"
-                aria-label="WhatsApp Hızlı Sipariş Hattı"
-                className="shrink-0 text-xs sm:text-sm font-bold text-white bg-green-600 hover:bg-green-700 px-2.5 sm:px-4 py-2 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
-              >
-                <span className="hidden xs:inline">Sipariş Hattı</span>
-                <span className="xs:hidden">Sipariş</span>
-              </a>
-            </nav>
-          </div>
-        </header>
-
-        {/* MAIN */}
-        <main id="main-content" className="flex-1 min-w-0">
-          {children}
-        </main>
-
-        {/* FOOTER */}
-        <footer
-          className="bg-white border-t border-gray-200 mt-auto"
-          role="contentinfo"
-        >
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-              <p className="text-sm text-gray-500">
-                &copy; {currentYear} EZM OTO. Tüm hakları saklıdır.
-              </p>
-
-              <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
                 <Link
                   href="/hakkimizda"
-                  className="text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                  className="shrink-0 whitespace-nowrap px-1 text-[11px] font-medium text-gray-600 transition-colors hover:text-blue-600 sm:px-0 sm:text-xs md:text-sm"
                 >
                   Hakkımızda
                 </Link>
 
                 <Link
                   href="/iletisim"
-                  className="text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                  className="shrink-0 whitespace-nowrap px-1 text-[11px] font-medium text-gray-600 transition-colors hover:text-blue-600 sm:px-0 sm:text-xs md:text-sm"
+                >
+                  İletişim
+                </Link>
+
+                {/* WHATSAPP */}
+                <a
+                  href="https://wa.me/905546588556"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="WhatsApp Hızlı Sipariş Hattı"
+                  aria-label="WhatsApp Hızlı Sipariş Hattı"
+                  className="flex shrink-0 items-center justify-center rounded-lg bg-green-600 px-2.5 py-2 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-green-700 active:scale-[0.98] sm:rounded-xl sm:px-3 sm:text-xs md:px-4 md:text-sm"
+                >
+                  <span className="sm:hidden">Sipariş</span>
+                  <span className="hidden sm:inline">Sipariş Hattı</span>
+                </a>
+              </nav>
+            </div>
+          </div>
+        </header>
+
+        {/* MAIN */}
+        <main
+          id="main-content"
+          className="min-w-0 flex-1 overflow-x-hidden"
+        >
+          {children}
+        </main>
+
+        {/* FOOTER */}
+        <footer
+          className="mt-auto border-t border-gray-200 bg-white"
+          role="contentinfo"
+        >
+          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            
+            <div className="flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
+              
+              {/* COPYRIGHT */}
+              <p className="text-xs leading-relaxed text-gray-500 sm:text-sm">
+                &copy; {currentYear} EZM OTO. Tüm hakları saklıdır.
+              </p>
+
+              {/* FOOTER LINKS */}
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-x-5">
+                <Link
+                  href="/hakkimizda"
+                  className="text-xs text-gray-500 transition-colors hover:text-blue-600"
+                >
+                  Hakkımızda
+                </Link>
+
+                <Link
+                  href="/iletisim"
+                  className="text-xs text-gray-500 transition-colors hover:text-blue-600"
                 >
                   İletişim
                 </Link>
 
                 <Link
                   href="/soket"
-                  className="text-xs text-gray-400 hover:text-blue-600 transition-colors"
+                  className="text-xs text-gray-400 transition-colors hover:text-blue-600"
                 >
                   Soket
                 </Link>
@@ -259,7 +282,7 @@ export default function RootLayout({
                   href="https://wa.me/905546588556"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-gray-400 hover:text-green-600 transition-colors"
+                  className="text-xs text-gray-400 transition-colors hover:text-green-600"
                 >
                   İletişim Hattı
                 </a>
@@ -268,7 +291,7 @@ export default function RootLayout({
           </div>
         </footer>
 
-        {/* Global Client Components */}
+        {/* GLOBAL CLIENT COMPONENTS */}
         <ScrollToTop />
         <ScrollRestorationManager />
         <CoreStatusMonitor />
