@@ -142,10 +142,10 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
 
   return (
     <div className="w-full space-y-6 min-h-[calc(100vh-250px)] flex flex-col">
-      <div className="w-full bg-gradient-to-r from-blue-600 to-blue-900 p-6 rounded-2xl shadow-sm">
-        <div className="max-w-3xl mx-auto">
+      <div className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-900 p-6 shadow-sm">
+        <div className="mx-auto max-w-3xl">
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
               🔍
             </span>
             <input
@@ -153,12 +153,13 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
               placeholder="Üretici kodu, OEM no veya parça adını yazın"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
-              className="w-full pl-12 pr-16 py-4 rounded-xl text-sm font-medium outline-none shadow-inner border border-transparent focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all"
+              className="w-full rounded-xl border border-transparent py-4 pl-12 pr-16 text-sm font-medium outline-none shadow-inner transition-all focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
             />
             {inputValue && (
-              <button 
-                onClick={handleClear} 
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors"
+              <button
+                type="button"
+                onClick={handleClear}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-gray-100 px-2.5 py-1.5 text-[11px] font-bold text-gray-600 transition-colors hover:bg-gray-200"
               >
                 TEMİZLE
               </button>
