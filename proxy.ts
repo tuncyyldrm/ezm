@@ -1,9 +1,9 @@
-// middleware.ts
+// proxy.ts
 
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  let response = NextResponse.next();
+  const response = NextResponse.next();
 
   const supabase = createServerClient(
     supabaseUrl,
@@ -50,7 +50,7 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    const userRole = user.user_metadata?.role;
+    const userRole = user.app_metadata?.role;
 
     if (userRole !== 'admin') {
       return NextResponse.redirect(
@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
 
   // LOGIN SAYFASI
   if (pathname === '/login' && user) {
-    const userRole = user.user_metadata?.role;
+    const userRole = user.app_metadata?.role;
 
     return NextResponse.redirect(
       new URL(

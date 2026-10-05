@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import Image from 'next/image';
 
 const FORMATS = ['jpg', 'JPG'];
@@ -24,8 +24,10 @@ export default function CategoryImage({
   const [src, setSrc] = useState(`${storageUrl}/${slug}.${FORMATS[0]}?ver=${STATIC_VERSION}`);
 
   useEffect(() => {
-    setFormatIndex(0);
-    setSrc(`${storageUrl}/${slug}.${FORMATS[0]}?ver=${STATIC_VERSION}`);
+    startTransition(() => {
+      setFormatIndex(0);
+      setSrc(`${storageUrl}/${slug}.${FORMATS[0]}?ver=${STATIC_VERSION}`);
+    });
   }, [slug, storageUrl]);
 
   const handleError = () => {

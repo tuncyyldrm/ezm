@@ -1,66 +1,144 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const BUCKET = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
 const SIZE = 20;
 
+type CategoryOption = {
+  id: number;
+  name: string;
+};
+
+type ProductCode = {
+  id?: number;
+  code_type?: string | null;
+  code_value?: string | null;
+};
+
+type ProductVehicle = {
+  id?: number;
+  brands?: {
+    name?: string | null;
+  } | null;
+};
+
+type ProductRecord = {
+  id: number;
+  title: string;
+  sku: string;
+  categories?: { name?: string | null } | null;
+  product_codes?: ProductCode[] | null;
+  product_vehicles?: ProductVehicle[] | null;
+  pin_count?: number | null;
+  is_active?: boolean | null;
+  is_new?: boolean | null;
+};
+
+type ProductFilters = {
+  s: string;
+  c: string;
+  st: string;
+  isNew: string;
+};
+
+async function queryProducts(filters: ProductFilters, from: number) {
+  let query = supabase.from("products")
+    .select("*, categories(id,name), product_codes(id,code_value,code_type), product_vehicles(id,brands(name))", { count: "exact" })
+    .order("sku");
+
+  if (filters.s) query = query.or(`title.ilike.%${filters.s}%,sku.ilike.%${filters.s}%`);
+  if (filters.c) query = query.eq("category_id", filters.c);
+  if (filters.st === "active") query = query.eq("is_active", true);
+  if (filters.st === "passive") query = query.eq("is_active", false);
+  if (filters.isNew === "new") query = query.eq("is_new", true);
+  if (filters.isNew === "old") query = query.eq("is_new", false);
+
+  return query.range(from, from + SIZE - 1);
+}
+
 const cache = {
   get: (k: string) => { try { return JSON.parse(sessionStorage.getItem(k) || "null"); } catch { return null; } },
-  set: (k: string, v: any) => sessionStorage.setItem(k, JSON.stringify(v))
+  set: (k: string, v: unknown) => sessionStorage.setItem(k, JSON.stringify(v))
 };
 
 export default function ProductsPage() {
   const { push } = useRouter();
   const [state, setState] = useState({
-    prods: [] as any[],
-    cats: [] as any[],
+    prods: [] as ProductRecord[],
+    cats: [] as CategoryOption[],
     total: 0,
     page: 0,
     more: true,
     loading: true,
+    error: null as string | null,
     s: cache.get("ps") || "",
     c: cache.get("pc") || "",
     st: cache.get("pst") || "",
     isNew: cache.get("pn") || "" // Yeni ürün filtresi
   });
 
-  const update = (updates: Partial<typeof state>) => setState(prev => ({ ...prev, ...updates }));
+  const update = useCallback((updates: Partial<typeof state>) => {
+    startTransition(() => {
+      setState(prev => ({ ...prev, ...updates }));
+    });
+  }, []);
+
+  const loadCategories = useCallback(async () => {
+    const { data } = await supabase.from("categories").select("id,name").order("name");
+    update({ cats: data || [] });
+  }, [update]);
 
   const fetchProducts = useCallback(async (pageNum: number, reset = false) => {
-    update({ loading: true });
-    
-    let query = supabase.from("products")
-      .select("*, categories(id,name), product_codes(id,code_value,code_type), product_vehicles(id,brands(name))", { count: "exact" })
-      .order("sku");
-
-    if (state.s) query = query.or(`title.ilike.%${state.s}%,sku.ilike.%${state.s}%`);
-    if (state.c) query = query.eq("category_id", state.c);
-    if (state.st === "active") query = query.eq("is_active", true);
-    if (state.st === "passive") query = query.eq("is_active", false);
-    if (state.isNew === "new") query = query.eq("is_new", true);
-    if (state.isNew === "old") query = query.eq("is_new", false);
-
     const from = reset ? 0 : pageNum * SIZE;
-    const { data, count } = await query.range(from, from + SIZE - 1);
-    
-    update({
-      prods: reset ? (data || []) : [...state.prods, ...(data || [])],
+    update({ loading: true, error: null, ...(reset ? { prods: [], page: 0 } : {}) });
+    const { data, count, error } = await queryProducts({
+      s: state.s,
+      c: state.c,
+      st: state.st,
+      isNew: state.isNew
+    }, from);
+
+    setState(prev => ({
+      ...prev,
+      error: error?.message ?? null,
+      prods: reset ? (data || []) : [...prev.prods, ...(data || [])],
       total: count || 0,
       more: from + SIZE < (count || 0),
-      loading: false
-    });
-  }, [state.s, state.c, state.st, state.isNew]);
+      loading: false,
+      ...(reset ? { page: 0 } : { page: pageNum })
+    }));
+  }, [state.s, state.c, state.st, state.isNew, update]);
 
-  const deleteProduct = async (product: any) => {
+  const deleteProduct = async (product: ProductRecord) => {
     if (!confirm(`${product.title} silinsin mi?`)) return;
-    await Promise.all([
-      supabase.storage.from("product-images").remove([`${product.sku}.jpg`]),
-      supabase.from("products").delete().eq("id", product.id)
-    ]);
-    fetchProducts(0, true);
+    try {
+      const [codesResult, vehiclesResult] = await Promise.all([
+        supabase.from("product_codes").delete().eq("product_id", product.id),
+        supabase.from("product_vehicles").delete().eq("product_id", product.id)
+      ]);
+      if (codesResult.error) throw codesResult.error;
+      if (vehiclesResult.error) throw vehiclesResult.error;
+
+      const { error } = await supabase.from("products").delete().eq("id", product.id);
+      if (error) throw error;
+
+      const { error: imageError } = await supabase.storage
+        .from("product-images")
+        .remove([`${product.sku}.jpg`]);
+      if (imageError) {
+        console.error("Ürün silindi ancak görsel silinemedi:", imageError);
+        alert("Ürün silindi ancak görsel dosyası silinemedi.");
+      }
+
+      await fetchProducts(0, true);
+    } catch (error) {
+      console.error("Ürün silme hatası:", error);
+      alert(error instanceof Error ? error.message : "Ürün silinemedi.");
+    }
   };
 
   const navigate = (path: string) => {
@@ -73,8 +151,45 @@ export default function ProductsPage() {
     update({ s: "", c: "", st: "", isNew: "", prods: [], page: 0 });
   };
 
-  useEffect(() => { supabase.from("categories").select("id,name").order("name").then(({ data }) => update({ cats: data || [] })); }, []);
-  useEffect(() => { update({ prods: [], page: 0 }); fetchProducts(0, true); }, [state.s, state.c, state.st, state.isNew]);
+  useEffect(() => { void loadCategories(); }, [loadCategories]);
+  useEffect(() => {
+    let active = true;
+
+    const loadProducts = async () => {
+      try {
+        const { data, count, error } = await queryProducts({
+          s: state.s,
+          c: state.c,
+          st: state.st,
+          isNew: state.isNew
+        }, 0);
+        if (!active) return;
+
+        setState(prev => ({
+          ...prev,
+          prods: data || [],
+          total: count || 0,
+          more: SIZE < (count || 0),
+          loading: false,
+          error: error?.message ?? null,
+          page: 0
+        }));
+      } catch (error) {
+        if (!active) return;
+        console.error("Ürün listesi yükleme hatası:", error);
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: error instanceof Error ? error.message : "Ürünler yüklenemedi."
+        }));
+      }
+    };
+
+    void loadProducts();
+    return () => {
+      active = false;
+    };
+  }, [state.s, state.c, state.st, state.isNew]);
   useEffect(() => { 
     ["ps", "pc", "pst", "pn"].forEach((k, i) => cache.set(k, [state.s, state.c, state.st, state.isNew][i])); 
   }, [state.s, state.c, state.st, state.isNew]);
@@ -106,22 +221,28 @@ export default function ProductsPage() {
 
         {/* Filtreler */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-8">
-          <input placeholder="🔍 Ara..." value={state.s} onChange={e => update({ s: e.target.value })} className={inputClass} />
-          <select value={state.c} onChange={e => update({ c: e.target.value })} className={inputClass}>
+          <input placeholder="🔍 Ara..." value={state.s} onChange={e => update({ s: e.target.value, loading: true, error: null })} className={inputClass} />
+          <select value={state.c} onChange={e => update({ c: e.target.value, loading: true, error: null })} className={inputClass}>
             <option value="">📁 Tüm Kategoriler</option>
             {state.cats.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
           </select>
-          <select value={state.st} onChange={e => update({ st: e.target.value })} className={inputClass}>
+          <select value={state.st} onChange={e => update({ st: e.target.value, loading: true, error: null })} className={inputClass}>
             <option value="">📊 Tümü</option>
             <option value="active">🟢 Aktif</option>
             <option value="passive">🔴 Pasif</option>
           </select>
-          <select value={state.isNew} onChange={e => update({ isNew: e.target.value })} className={inputClass}>
+          <select value={state.isNew} onChange={e => update({ isNew: e.target.value, loading: true, error: null })} className={inputClass}>
             <option value="">🆕 Tüm Ürünler</option>
             <option value="new">✨ Yeni Ürünler</option>
             <option value="old">📦 Normal Ürünler</option>
           </select>
         </div>
+
+        {state.error && (
+          <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            Ürünler yüklenemedi: {state.error}
+          </div>
+        )}
 
         {/* Yükleniyor */}
         {state.loading && !state.prods.length && (
@@ -163,11 +284,11 @@ export default function ProductsPage() {
                       <td className="px-3 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden flex-shrink-0">
-                            <img src={`${BUCKET}/${p.sku}.jpg`} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} alt="" />
+                            <Image src={`${BUCKET}/${p.sku}.jpg`} className="w-full h-full object-cover" alt={p.title} width={48} height={48} unoptimized onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                           </div>
                           <div>
                             <div className="font-bold text-sm text-slate-800 group-hover:text-indigo-700 truncate max-w-[250px]">{p.title}</div>
-                            {p.product_codes?.slice(0, 2).map((c: any) => (
+                            {p.product_codes?.slice(0, 2).map((c: ProductCode) => (
                               <span key={c.id} className="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded mr-1">{c.code_type}: {c.code_value}</span>
                             ))}
                           </div>
@@ -177,7 +298,7 @@ export default function ProductsPage() {
                       <td className="px-3 py-4 text-sm text-slate-600">{p.categories?.name || "-"}</td>
                       <td className="px-3 py-4">
                         <div className="flex flex-wrap gap-1">
-                          {p.product_vehicles?.slice(0, 2).map((v: any) => (
+                          {p.product_vehicles?.slice(0, 2).map((v: ProductVehicle) => (
                             <span key={v.id} className="text-[11px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-lg">{v.brands?.name}</span>
                           )) || <span className="text-slate-300">-</span>}
                         </div>

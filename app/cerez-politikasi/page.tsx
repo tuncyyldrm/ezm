@@ -53,7 +53,7 @@ export default function CookiePolicyPage() {
           </p>
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              Sitemize ilk girişinizde karşınıza çıkan <strong>Çerez Onay Bandı</strong> üzerinden isteklerinizi "Kabul Et" veya "Reddet" şeklinde tek tıkla belirtebilirsiniz.
+              Sitemize ilk girişinizde karşınıza çıkan <strong>Çerez Onay Bandı</strong> üzerinden isteklerinizi “Kabul Et” veya “Reddet” şeklinde tek tıkla belirtebilirsiniz.
             </li>
             <li>
               Kullandığınız internet tarayıcısının (Google Chrome, Safari, Microsoft Edge vb.) ayarlar kısmından daha önce kaydedilmiş çerezleri silebilir veya gelecekte çerez kaydedilmesini tamamen engelleyebilirsiniz.

@@ -14,15 +14,60 @@ interface CategoryPageProps {
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.com.tr';
 
+interface ProductCode {
+  code_type: string | null;
+  code_value: string | null;
+}
+
+interface ProductVehicle {
+  brands?:
+    | {
+        name?: string | null;
+      }
+    | Array<{
+        name?: string | null;
+      }>
+    | null;
+}
+
+interface ProductRecord {
+  id: number;
+  sku: string;
+  title: string;
+  image_url?: string | null;
+  pin_count?: number | string | null;
+  is_new?: boolean | null;
+  category_id?: number | null;
+  product_codes?: ProductCode[] | null;
+  product_vehicles?: ProductVehicle[] | null;
+}
+
+interface CategorySummary {
+  id: number;
+  name: string;
+  slug: string;
+  parent_id?: number | null;
+}
+
+type NormalizedProduct = ProductRecord & {
+  pin_count: number;
+  product_codes: ProductCode[];
+  product_vehicles: ProductVehicle[];
+};
+
 const getBaseUrl = () => SITE_URL;
 
-const normalizeProduct = (p: any) => ({
+const normalizeProduct = (p: ProductRecord): NormalizedProduct => ({
   ...p,
   pin_count: Number(p.pin_count) || 0,
   product_codes: Array.isArray(p.product_codes) ? p.product_codes : [],
-  product_vehicles: Array.isArray(p.product_vehicles) 
-    ? p.product_vehicles.filter((v: any) => v?.brands?.name) 
-    : []
+  product_vehicles: Array.isArray(p.product_vehicles)
+    ? p.product_vehicles.filter((v) => {
+        if (!v?.brands) return false;
+        if (Array.isArray(v.brands)) return v.brands.some((brand) => Boolean(brand?.name));
+        return Boolean(v.brands.name);
+      })
+    : [],
 });
 
 // 🚀 HIZ DOPİNGİ: En popüler kategorileri derleme (build) aşamasında önceden hazırlar
@@ -113,7 +158,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         description: `${category.name} kategorisinde ${products.length} ürün`,
         url: currentUrl,
         numberOfItems: products.length,
-        itemListElement: products.slice(0, 20).map((p: any, i: number) => ({
+        itemListElement: products.slice(0, 20).map((p, i: number) => ({
           '@type': 'ListItem',
           position: i + 1,
           item: {
@@ -123,7 +168,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
             image: p.image_url || `${STORAGE_URL}/${p.sku}.jpg`,
             ...(p.pin_count > 0 && { additionalProperty: { '@type': 'PropertyValue', name: 'PIN', value: p.pin_count } }),
             ...(p.product_codes.length > 0 && {
-              identifier: p.product_codes.map((c: any) => ({ '@type': 'PropertyValue', name: c.code_type, value: c.code_value }))
+              identifier: p.product_codes.map((c) => ({ '@type': 'PropertyValue', name: c.code_type, value: c.code_value }))
             })
           }
         }))
@@ -178,7 +223,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
               Alt Kategoriler ({subCategories.length})
             </h2>
             <div className="flex flex-wrap gap-2">
-              {subCategories.map((sub: any) => (
+              {subCategories.map((sub: CategorySummary) => (
                 <Link
                   key={sub.id}
                   href={`/${sub.slug}`}

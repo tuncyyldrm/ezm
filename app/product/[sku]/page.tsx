@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
-import ProductImage from '@/components/ProductImage';
 import SocketImage from '@/components/SocketImage';
 import ProductImageZoom from '@/components/ProductImageZoom';
 import Link from 'next/link';
@@ -16,11 +15,51 @@ const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/
 const WHATSAPP = '905546588556';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.com.tr';
 
-const filterCodes = (codes: any[], type: string) =>
-  (codes || []).filter(c => c.code_type === type).map(c => c.code_value);
+type ProductCode = {
+  code_type?: string | null;
+  code_value?: string | null;
+};
 
-const uniqueVehicles = (vehicles: any[]) =>
-  [...new Set(vehicles?.filter((v: any) => v?.brands?.name).map((v: any) => v.brands.name) || [])].sort();
+type ProductVehicle = {
+  brands?:
+    | {
+        name?: string | null;
+      }
+    | Array<{
+        name?: string | null;
+      }>
+    | null;
+};
+
+type ProductCategory = {
+  name?: string | null;
+  slug?: string | null;
+};
+
+type ProductRecord = {
+  sku: string;
+  title: string;
+  pin_count?: number | null;
+  categories?: ProductCategory | ProductCategory[] | null;
+  is_new?: boolean | null;
+  product_codes?: ProductCode[] | null;
+  product_vehicles?: ProductVehicle[] | null;
+};
+
+const filterCodes = (codes: ProductCode[] | null | undefined, type: string) =>
+  (codes || []).filter((c) => c.code_type === type).map((c) => c.code_value).filter((value): value is string => Boolean(value));
+
+const toCategory = (category: ProductCategory | ProductCategory[] | null | undefined) =>
+  Array.isArray(category) ? category[0] ?? null : category ?? null;
+
+const uniqueVehicles = (vehicles: ProductVehicle[] | null | undefined) =>
+  [...new Set((vehicles || []).flatMap((v) => {
+    if (!v?.brands) return [];
+    if (Array.isArray(v.brands)) {
+      return v.brands.map((brand) => brand?.name).filter((name): name is string => Boolean(name));
+    }
+    return v.brands.name ? [v.brands.name] : [];
+  }))].sort();
 
 const whatsappMsg = (sku: string, title: string, pin: number, url: string) =>
   `Merhaba,\n${sku} - ${title} hakkında bilgi almak istiyorum.${pin > 0 ? ` (${pin} PIN)` : ''}\n\n${url}`;
@@ -40,8 +79,9 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   if (!p) return { title: 'Ürün Bulunamadı', robots: { index: false } };
 
-  const oems = filterCodes((p as any).product_codes, 'OEM');
-  const kategoriAdi = (p as any).categories?.name || 'Oto Yedek Parça';
+  const categoryInfo = toCategory(p.categories);
+  const oems = filterCodes(p.product_codes, 'OEM');
+  const kategoriAdi = categoryInfo?.name || 'Oto Yedek Parça';
   
   // Ürünün tam resim linki oluşturuluyor
   const img = `${STORAGE_URL}/${p.sku}.${IMAGE_EXTENSION}`; 
@@ -74,19 +114,21 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
 
   const { data: product, error } = await supabase
     .from('products')
-    .select('id, sku, title, pin_count, is_new, category_id, categories!inner(id, name, slug), product_codes(code_value, code_type), product_vehicles(brands(name))')
+    .select('id, sku, title, pin_count, is_new, category_id, categories(id, name, slug), product_codes(code_value, code_type), product_vehicles(brands(name))')
     .eq('sku', decoded)
     .eq('is_active', true)
     .maybeSingle();
 
   if (error || !product) { console.error(error); notFound(); }
 
-  const p = product as any;
+  const p = product as ProductRecord & { categories?: ProductCategory | ProductCategory[] | null; product_codes?: ProductCode[] | null; product_vehicles?: ProductVehicle[] | null; sku: string; title: string; pin_count?: number | null; is_new?: boolean | null; };
+  const categoryInfo = toCategory(p.categories);
   const oems = filterCodes(p.product_codes, 'OEM');
   const muadils = filterCodes(p.product_codes, 'MUADIL');
   const vehicles = uniqueVehicles(p.product_vehicles);
+  const pinCount = Number(p.pin_count) || 0;
   const img = `${STORAGE_URL}/${p.sku}.${IMAGE_EXTENSION}`;
-  const whatsapp = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(whatsappMsg(p.sku, p.title, p.pin_count || 0, url))}`;
+  const whatsapp = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(whatsappMsg(p.sku, p.title, pinCount, url))}`;
 
   const schema = {
     '@context': 'https://schema.org',
@@ -97,7 +139,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         sku: p.sku,
         image: img,
         description: `${p.title} - EZM OTO Güvencesiyle Kaliteli Oto Yedek Parça çözümleri.`,
-        category: p.categories?.name,
+        category: categoryInfo?.name,
         brand: { '@type': 'Brand', name: 'EZM OTO' },
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'TRY', availability: 'https://schema.org/InStock', url: url, seller: { '@type': 'Organization', name: 'EZM OTO' } }
       }
@@ -113,8 +155,8 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         <nav className="mb-6 text-sm text-gray-500" aria-label="Breadcrumb">
           <Link href="/" className="hover:text-blue-600">Ana Sayfa</Link>
           <span className="mx-2">/</span>
-          {p.categories ? (
-            <Link href={`/${p.categories.slug}`} className="hover:text-blue-600">{p.categories.name}</Link>
+          {categoryInfo ? (
+            <Link href={`/${categoryInfo.slug}`} className="hover:text-blue-600">{categoryInfo.name}</Link>
           ) : (
             <Link href="/urunler" className="hover:text-blue-600">Ürünler</Link>
           )}
@@ -131,7 +173,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
               {p.is_new && <span className="absolute top-4 left-4 bg-green-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">YENİ ÜRÜN</span>}
               
               <div className="w-full flex-1 flex items-center justify-center min-h-[280px]">
-                <ProductImageZoom sku={p.sku} title={`${p.sku} - ${p.title} ${p.categories?.name || ''}`} storageUrl={STORAGE_URL} />
+                <ProductImageZoom sku={p.sku} title={`${p.sku} - ${p.title} ${categoryInfo?.name || ''}`} storageUrl={STORAGE_URL} />
               </div>
 
               <a href={whatsapp} target="_blank" rel="noopener noreferrer" className="w-full mt-3 flex items-center justify-center gap-3 px-5 py-3 bg-[#25D366] hover:bg-[#20ba56] text-white text-sm font-black rounded-xl shadow-md hover:shadow-xl transition-all duration-300 group select-none">
@@ -148,20 +190,20 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
                 <h1 className="text-2xl font-black text-gray-950 bg-gray-100 px-4 py-2 rounded-lg font-mono select-all">
                   <span className="sr-only">Ürün Kodu: </span>{p.sku}
                 </h1>
-                {p.pin_count > 0 && (
-                  <span className="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full border border-blue-100">🔌 {p.pin_count} PIN</span>
+                {pinCount > 0 && (
+                  <span className="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full border border-blue-100">🔌 {pinCount} PIN</span>
                 )}
               </div>
 
               <h2 className="text-xl font-semibold text-gray-800 mb-2">{p.title}</h2>
               
               <p className="text-sm text-gray-600 mb-4 font-normal">
-                <strong>{p.sku}</strong> referans numaralı bu unit, yüksek kalite standartlarında üretilmiş bir <strong>{p.categories?.name || 'oto yedek parça'}</strong> ürünüdür.
+                <strong>{p.sku}</strong> referans numaralı bu unit, yüksek kalite standartlarında üretilmiş bir <strong>{categoryInfo?.name || 'oto yedek parça'}</strong> ürünüdür.
               </p>
 
-              {p.categories && (
-                <Link href={`/${p.categories.slug}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg mb-6 w-fit">
-                  📂 {p.categories.name} Kategorisi
+              {categoryInfo && (
+                <Link href={`/${categoryInfo.slug}`} className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg mb-6 w-fit">
+                  📂 {categoryInfo.name} Kategorisi
                 </Link>
               )}
 

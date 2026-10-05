@@ -26,7 +26,13 @@ export default async function HomePage() {
   ]);
 
   if (error) console.error('Kategori hatası:', error);
-  const cats = (categories || []) as any[];
+  type CategoryCard = {
+    id: string | number;
+    slug: string;
+    name: string;
+  };
+
+  const cats = (categories || []) as CategoryCard[];
   const productCount = totalProducts || 0;
 
   // 👑 SEO OPTİMİZASYONU: Arama ve Mağaza şemalarını birleştirip tek seferde basıyoruz

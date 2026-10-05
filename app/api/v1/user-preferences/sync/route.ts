@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       );
     }
 
-    let body: any = {};
+    let body: Record<string, unknown> = {};
 
     try {
       body = await request.json();
@@ -253,7 +253,7 @@ export async function POST(request: Request) {
           : '/';
     }
 
-    const gaPayload: any = {
+    const gaPayload: Record<string, unknown> = {
       client_id:
         typeof uid === 'string' && uid
           ? uid

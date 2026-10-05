@@ -4,17 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, Product } from '@/lib/supabase';
 import ProductImage from '@/components/ProductImage';
-
-function createTurkishRegexPattern(text: string): string {
-  return text
-    .replace(/[+()]/g, '') // Tireyi (-) buradan sildik, koruyoruz.
-    .replace(/[iİıI]/g, '[iİıI]')
-    .replace(/[şŞsS]/g, '[şŞsS]')
-    .replace(/[çÇcC]/g, '[çÇcC]')
-    .replace(/[ğĞgG]/g, '[ğĞgG]')
-    .replace(/[üÜuU]/g, '[üÜuU]')
-    .replace(/[öÖoO]/g, '[öÖoO]');
-}
+import { createTurkishSearchPattern } from '@/lib/search';
 
 export default function SearchBar() {
   const [query, setQuery] = useState('');
@@ -83,7 +73,7 @@ export default function SearchBar() {
         const keywords = trimmed.split(/\s+/);
         
         // Sizin yazdığınız, tire esnekliği sağlayan regex mantığı (Tamamen korundu)
-        const flexiblePattern = createTurkishRegexPattern(trimmed).replace(/-/g, '-?');
+        const flexiblePattern = createTurkishSearchPattern(trimmed).replace(/-/g, '-?');
 
         // Paralel sorgular
         const [titleRes, codeRes, brandRes] = await Promise.all([
@@ -95,7 +85,7 @@ export default function SearchBar() {
               .eq('is_active', true);
             
             keywords.forEach(word => {
-              const pattern = createTurkishRegexPattern(word);
+              const pattern = createTurkishSearchPattern(word);
               queryBuilder = queryBuilder.or(`title.imatch..*${pattern}.*,sku.imatch..*${pattern}.*`);
             });
             
@@ -116,7 +106,7 @@ export default function SearchBar() {
           // 3. Marka adında Regex arama
           // 💡 GÜNCELLEME: inner join tablosunda 'is_active' kontrolü eklendi, pasif ürünler elendi
           (async () => {
-            const brandPattern = createTurkishRegexPattern(trimmed);
+            const brandPattern = createTurkishSearchPattern(trimmed);
             return supabase
               .from('product_vehicles')
               .select('products!inner(id, sku, title, pin_count, is_active)')
@@ -130,13 +120,15 @@ export default function SearchBar() {
 
         const titleData = (titleRes.data || []) as Product[];
         
+        type JoinedProductItem = { products?: Product | Product[] | null };
+
         const codeData = (codeRes.data || [])
-          .map((item: any) => item.products)
-          .filter(Boolean) as Product[];
+          .map((item: JoinedProductItem) => Array.isArray(item.products) ? item.products[0] : item.products)
+          .filter((product): product is Product => Boolean(product));
         
         const brandData = (brandRes.data || [])
-          .map((item: any) => item.products)
-          .filter(Boolean) as Product[];
+          .map((item: JoinedProductItem) => Array.isArray(item.products) ? item.products[0] : item.products)
+          .filter((product): product is Product => Boolean(product));
 
         // Birleştir ve güvenli tekilleştir
         const combined = [...titleData, ...codeData, ...brandData];

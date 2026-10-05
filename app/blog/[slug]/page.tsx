@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { supabase } from "@/lib/supabase";
@@ -210,9 +211,12 @@ export default async function BlogDetailPage({
         {imageUrl && (
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
 
-            <img
+            <Image
               src={imageUrl}
               alt={post.title}
+              width={1200}
+              height={560}
+              unoptimized
               className="w-full max-h-[560px] object-cover rounded-2xl shadow-sm"
             />
 

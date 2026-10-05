@@ -215,8 +215,8 @@ function getOrCreateSession(){
 }
 
 function sendAnalytics(
-  payload:Record<string,any>
-){
+  payload: Record<string, unknown>
+) {
 
   fetch(
     '/api/v1/user-preferences/sync',
@@ -242,9 +242,8 @@ function sendAnalytics(
 
 export function trackCustomEvent(
   eventName:string,
-  customParams:
-  Record<string,any>={}
-){
+  customParams: Record<string, unknown> = {}
+) {
 
   if(
     typeof window === 'undefined'
@@ -263,8 +262,18 @@ export function trackCustomEvent(
     );
 
   const connection =
-    (navigator as any)
-      ?.connection;
+    (navigator as Navigator & {
+      connection?: {
+        effectiveType?: string;
+        downlink?: number;
+        rtt?: number;
+      };
+    })?.connection;
+
+  const engagementTime =
+    typeof customParams.engagement_time_msec === 'number'
+      ? customParams.engagement_time_msec
+      : 100;
 
   sendAnalytics({
 
@@ -326,9 +335,7 @@ export function trackCustomEvent(
       connection?.rtt || null,
 
     engagement_time_msec:
-      customParams.engagement_time_msec
-      ||
-      100,
+      engagementTime,
 
     ...customParams
 
@@ -345,10 +352,10 @@ function MonitorInternal(){
     useSearchParams();
 
   const pageStart =
-    useRef(Date.now());
+    useRef(0);
 
   const activeStart =
-    useRef(Date.now());
+    useRef(0);
 
   const activeTime =
     useRef(0);

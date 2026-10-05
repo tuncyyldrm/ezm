@@ -1,25 +1,30 @@
 // app/admin/categories/page.tsx
 "use client";
 
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
 const BUCKET_URL = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
 
+type CategoryRecord = {
+  id: number;
+  name: string;
+  slug: string;
+  parent_id?: number | null;
+  sort_order?: number | string | null;
+};
+
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [name, setName] = useState("");
-  const [parentId, setParentId] = useState("");
+  const [parentId, setParentId] = useState<number | "">("");
   const [sortOrder, setSortOrder] = useState(0);
   const [editId, setEditId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
-
-  useEffect(() => {
-    load();
-  }, []);
 
   const load = async () => {
     const { data, error } = await supabase
@@ -35,6 +40,12 @@ export default function CategoriesPage() {
 
     setCategories(data || []);
   };
+
+  useEffect(() => {
+    void (async () => {
+      await load();
+    })();
+  }, []);
 
   const getImageUrl = (slug: string) => `${BUCKET_URL}/${slug}.jpg`;
 
@@ -123,7 +134,7 @@ export default function CategoriesPage() {
     setLoading(false);
   };
 
-  const handleEdit = (cat: any) => {
+  const handleEdit = (cat: CategoryRecord) => {
     setEditId(cat.id);
     setName(cat.name);
     setParentId(cat.parent_id || "");
@@ -156,7 +167,7 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleDelete = async (cat: any) => {
+  const handleDelete = async (cat: CategoryRecord) => {
     if (!confirm(`${cat.name} silinsin mi?`)) return;
 
     const extensions = ["jpg", "jpeg", "png", "webp"];
@@ -256,24 +267,13 @@ export default function CategoriesPage() {
                         {/* Liste İçi Görsel */}
                         <div className="w-12 h-12 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
                           {cat.slug ? (
-                            <img
+                            <Image
                               src={getImageUrl(cat.slug)}
                               alt={cat.name}
+                              width={48}
+                              height={48}
+                              unoptimized
                               className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
-                                  "none";
-
-                                const el =
-                                  (e.target as HTMLImageElement)
-                                    .parentElement;
-
-                                if (el) {
-                                  el.innerHTML = `<span class="text-lg">${
-                                    cat.parent_id ? "📂" : "📁"
-                                  }</span>`;
-                                }
-                              }}
                             />
                           ) : (
                             <span className="text-lg">
@@ -398,7 +398,7 @@ export default function CategoriesPage() {
                 <select
                   value={parentId}
                   onChange={(e) =>
-                    setParentId(e.target.value)
+                    setParentId(e.target.value ? Number(e.target.value) : "")
                   }
                   className={inputStyle}
                 >
@@ -424,16 +424,13 @@ export default function CategoriesPage() {
 
                 <div className="relative group bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-all">
                   {previewUrl ? (
-                    <img
+                    <Image
                       src={previewUrl}
                       className="w-full h-full object-cover"
                       alt="Önizleme"
-                      onError={(e) => {
-                        (
-                          e.target as HTMLImageElement
-                        ).src =
-                          "data:image/svg+xml;utf8,<svg...";
-                      }}
+                      width={1200}
+                      height={800}
+                      unoptimized
                     />
                   ) : (
                     <div className="text-center p-4">

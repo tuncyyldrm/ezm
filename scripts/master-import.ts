@@ -242,8 +242,9 @@ async function processFile(filePath: string, fileName: string) {
         await supabase.from('product_codes').insert(uniquePayload);
       }
 
-    } catch (lineError: any) {
-      console.error(`❌ Sku [${sku}] işlenirken satır hatası:`, lineError.message);
+    } catch (lineError: unknown) {
+      const message = lineError instanceof Error ? lineError.message : String(lineError);
+      console.error(`❌ Sku [${sku}] işlenirken satır hatası:`, message);
     }
   }
 

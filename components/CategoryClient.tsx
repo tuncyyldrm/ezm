@@ -2,10 +2,34 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
+import { compactSearchText, normalizeSearchText } from '@/lib/search';
+
+type ProductCode = {
+  code_value?: string | null;
+};
+
+type ProductVehicle = {
+  brands?:
+    | {
+        name?: string | null;
+      }
+    | Array<{
+        name?: string | null;
+      }>
+    | null;
+};
+
+type ProductRecord = {
+  id?: number | string;
+  sku: string;
+  title: string;
+  product_codes?: ProductCode[] | null;
+  product_vehicles?: ProductVehicle[] | null;
+};
 
 interface CategoryClientProps {
   categoryName: string;
-  products: any[];
+  products: ProductRecord[];
 }
 
 export default function CategoryClient({ categoryName, products }: CategoryClientProps) {
@@ -23,22 +47,26 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
   // 1. ARAMA HAVUZU INDEKSLENMESI
   const indexedProducts = useMemo(() => {
     return products.map(product => {
-      const cleanSku = product.sku ? product.sku.replace(/[\s\-_./]/g, '').toLocaleLowerCase('tr-TR') : '';
-      const rawSku = product.sku ? product.sku.toLocaleLowerCase('tr-TR') : '';
-      const title = product.title ? product.title.toLocaleLowerCase('tr-TR') : '';
+      const cleanSku = compactSearchText(product.sku);
+      const rawSku = normalizeSearchText(product.sku);
+      const title = normalizeSearchText(product.title);
       
       const codes: string[] = [];
       const cleanCodes: string[] = [];
       
-      product.product_codes?.forEach((c: any) => {
+      product.product_codes?.forEach((c: ProductCode) => {
         if (c.code_value) {
-          const val = c.code_value.toLocaleLowerCase('tr-TR');
+          const val = normalizeSearchText(c.code_value);
           codes.push(val);
-          cleanCodes.push(val.replace(/[\s\-_./]/g, ''));
+          cleanCodes.push(compactSearchText(val));
         }
       });
 
-      const vehicles = product.product_vehicles?.map((pv: any) => pv.brands?.name?.toLocaleLowerCase('tr-TR')).filter(Boolean) || [];
+      const vehicles = (product.product_vehicles || []).flatMap((pv: ProductVehicle) => {
+        if (!pv.brands) return [];
+        if (Array.isArray(pv.brands)) return pv.brands.map((brand) => brand?.name ? normalizeSearchText(brand.name) : undefined).filter((name): name is string => Boolean(name));
+        return pv.brands.name ? [normalizeSearchText(pv.brands.name)] : [];
+      });
 
       return {
         origin: product,
@@ -58,9 +86,9 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
   const filteredProducts = useMemo(() => {
     if (!debouncedSearch.trim()) return products;
 
-    const cleanSearch = debouncedSearch.toLocaleLowerCase('tr-TR').trim();
+    const cleanSearch = normalizeSearchText(debouncedSearch).trim();
     const searchWords = cleanSearch.split(/\s+/);
-    const compactSearch = cleanSearch.replace(/[\s\-_./]/g, '');
+    const compactSearch = compactSearchText(cleanSearch);
 
     const scored = indexedProducts
       .map(item => {
@@ -88,7 +116,7 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
 
         // D. 💡 ÇÖZÜM: Parçalı Havuz Araması (Çoklu kelimelerde esnek eşleşme sağlar)
         const hasAllWords = searchWords.every(word => {
-          const compactWord = word.replace(/[\s\-_./]/g, '');
+          const compactWord = compactSearchText(word);
           return item.fullPool.includes(word) || item.fullPool.includes(compactWord);
         });
 
@@ -144,7 +172,7 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
           <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">{categoryName}</h2>
           {debouncedSearch && (
             <p className="text-xs text-gray-500 mt-0.5">
-              <span className="font-semibold text-blue-600">"{debouncedSearch}"</span> için sonuçlar
+              <span className="font-semibold text-blue-600">“{debouncedSearch}”</span> için sonuçlar
             </p>
           )}
         </div>

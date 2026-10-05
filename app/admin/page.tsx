@@ -4,28 +4,28 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  // 🌟 TEK SEFERDE MAKSİMUM VERİ: Mevcut tabloları filtreleyerek derin istatistik alıyoruz
-  const [products, categories, codes, zeroPrice, noStock, noImage] = await Promise.all([
-    supabase.from("products").select("*", { count: "exact", head: true }),
+  const [products, categories, codes, uncategorized, noImage] = await Promise.all([
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("categories").select("*", { count: "exact", head: true }),
     supabase.from("product_codes").select("*", { count: "exact", head: true }),
-    // Akıllı Filtreler (Ek tablo gerektirmez)
-    supabase.from("products").select("*", { count: "exact", head: true }).or("price.eq.0,price.is.null"),
-    supabase.from("products").select("*", { count: "exact", head: true }).eq("stock", 0),
-    supabase.from("products").select("*", { count: "exact", head: true }).or("image.is.null,image.eq.''"),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true).is("category_id", null),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true).is("image_url", null),
   ]);
 
-  // Ana Tıklanabilir İstatistikler
+  const failedQuery = [products, categories, codes, uncategorized, noImage].find(result => result.error);
+  if (failedQuery?.error) {
+    console.error("Admin dashboard verileri yüklenemedi:", failedQuery.error);
+    throw new Error("Dashboard verileri yüklenemedi. Veritabanı izinlerini kontrol edin.");
+  }
+
   const mainStats = [
-    { label: "Toplam Ürün", value: products.count || 0, color: "bg-indigo-600", icon: "📦", href: "/admin/products" },
-    { label: "Aktif Kategori", value: categories.count || 0, color: "bg-violet-600", icon: "📁", href: "/admin/categories" },
+    { label: "Aktif Ürün", value: products.count || 0, color: "bg-indigo-600", icon: "📦", href: "/admin/products" },
+    { label: "Kategori", value: categories.count || 0, color: "bg-violet-600", icon: "📁", href: "/admin/categories" },
   ];
 
-  // ⚠️ Kritik Uyarı ve Durum İstatistikleri (Az kod, dev işlev)
   const alertStats = [
-    { label: "Fiyatı Girilmemiş", value: zeroPrice.count || 0, color: zeroPrice.count ? "text-amber-600 bg-amber-50" : "text-slate-400 bg-slate-50", icon: "💰" },
-    { label: "Tükenen Ürünler", value: noStock.count || 0, color: noStock.count ? "text-rose-600 bg-rose-50" : "text-slate-400 bg-slate-50", icon: "🚨" },
-    { label: "Görseli Eksik", value: noImage.count || 0, color: noImage.count ? "text-blue-600 bg-blue-50" : "text-slate-400 bg-slate-50", icon: "🖼️" },
+    { label: "Kategorisiz Aktif Ürün", value: uncategorized.count || 0, color: uncategorized.count ? "text-amber-600 bg-amber-50" : "text-slate-400 bg-slate-50", icon: "📁" },
+    { label: "Görsel URL'si Olmayan Aktif Ürün", value: noImage.count || 0, color: noImage.count ? "text-blue-600 bg-blue-50" : "text-slate-400 bg-slate-50", icon: "🖼️" },
   ];
 
   return (
@@ -60,6 +60,20 @@ export default async function AdminDashboard() {
           <div className="text-2xl mb-2">🔍</div>
           <div className="text-4xl font-black text-slate-950/40 tracking-tight">{(codes.count || 0).toLocaleString('tr-TR')}</div>
           <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mt-1">Kayıtlı OEM / Muadil</p>
+        </div>
+      </div>
+
+      {/* Uyarı/İşlem Durumları */}
+      <div className="mb-6">
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Uyarı Durumları</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {alertStats.map((stat) => (
+            <div key={stat.label} className={`p-4 rounded-2xl border border-slate-100 ${stat.color}`}>
+              <div className="text-2xl mb-2">{stat.icon}</div>
+              <div className="text-2xl font-black text-slate-900">{stat.value.toLocaleString("tr-TR")}</div>
+              <p className="text-xs font-bold uppercase tracking-wider mt-1">{stat.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 

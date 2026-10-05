@@ -4,16 +4,35 @@ import { useState } from 'react';
 import Link from 'next/link';
 import ProductImage from '@/components/ProductImage';
 
+type ProductCode = {
+  code_type?: string | null;
+  code_value?: string | null;
+};
+
+type ProductRecord = {
+  sku: string;
+  title: string;
+  pin_count?: number | null;
+  is_new?: boolean | null;
+  product_codes?: ProductCode[] | null;
+};
+
 interface ProductCardProps {
-  product: any;
+  product: ProductRecord;
 }
 
 const STORAGE = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const codes = product?.product_codes || [];
-  const oems = codes.filter((c: any) => c?.code_type === 'OEM').map((c: any) => c.code_value);
-  const sockets = codes.filter((c: any) => c?.code_type === 'MUADIL').map((c: any) => c.code_value);
+  const codes = product.product_codes ?? [];
+  const oems = codes
+    .filter((c) => c.code_type === 'OEM')
+    .map((c) => c.code_value)
+    .filter((value): value is string => Boolean(value));
+  const sockets = codes
+    .filter((c) => c.code_type === 'MUADIL')
+    .map((c) => c.code_value)
+    .filter((value): value is string => Boolean(value));
   const pin = product?.pin_count || 0;
   const isNew = product?.is_new;
 

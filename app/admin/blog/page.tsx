@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -41,6 +42,16 @@ function slugify(text: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function createStorageFileName(prefix: string, extension: string) {
+  return `${prefix}-${Date.now()}.${extension}`;
+}
+
+function createContentImageFileName(extension: string) {
+  return `content-${Date.now()}-${Math.random()
+    .toString(36)
+    .substring(2, 8)}.${extension}`;
+}
+
 export default function BlogAdminPage() {
   const editorRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -68,26 +79,43 @@ export default function BlogAdminPage() {
 
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    loadPosts();
-  }, []);
-
   const loadPosts = async () => {
-    setListLoading(true);
-
     const { data, error } = await supabase
       .from("blog_posts")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Blog yükleme hatası:", error);
-      alert("Blog yazıları yüklenemedi.");
-    }
-
+    if (error) throw error;
     setPosts(data || []);
-    setListLoading(false);
   };
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPosts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("blog_posts")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+        if (!active) return;
+        setPosts(data || []);
+        setListLoading(false);
+      } catch (error) {
+        if (!active) return;
+        console.error("Blog yükleme hatası:", error);
+        alert("Blog yazıları yüklenemedi.");
+        setListLoading(false);
+      }
+    };
+
+    void loadPosts();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const resetForm = () => {
     setEditId(null);
@@ -189,7 +217,7 @@ export default function BlogAdminPage() {
     const extension =
       coverFile.name.split(".").pop()?.toLowerCase() || "jpg";
 
-    const filename = `${slug}-${Date.now()}.${extension}`;
+    const filename = createStorageFileName(slug, extension);
 
     const { error } = await supabase.storage
       .from("blog-images")
@@ -213,10 +241,7 @@ export default function BlogAdminPage() {
     const extension =
       file.name.split(".").pop()?.toLowerCase() || "jpg";
 
-    const filename =
-      `content-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 8)}.${extension}`;
+    const filename = createContentImageFileName(extension);
 
     const { error } = await supabase.storage
       .from("blog-images")
@@ -263,8 +288,10 @@ export default function BlogAdminPage() {
           </p>
         `
       );
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Bir hata oluştu.";
+      alert(message);
     } finally {
       setLoading(false);
 
@@ -365,9 +392,11 @@ export default function BlogAdminPage() {
 
       resetForm();
       await loadPosts();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      alert(error.message || "Bir hata oluştu.");
+      const message =
+        error instanceof Error ? error.message : "Bir hata oluştu.";
+      alert(message);
     } finally {
       setLoading(false);
     }
@@ -569,9 +598,12 @@ export default function BlogAdminPage() {
 
               {coverPreview && (
                 <div className="mt-4">
-                  <img
+                  <Image
                     src={coverPreview}
                     alt="Kapak önizleme"
+                    width={1200}
+                    height={300}
+                    unoptimized
                     className="w-full max-w-xl max-h-72 object-cover rounded-2xl border border-slate-200"
                   />
                 </div>
@@ -962,9 +994,12 @@ export default function BlogAdminPage() {
                 >
 
                   {post.cover_image ? (
-                    <img
+                    <Image
                       src={`${BUCKET_URL}/${post.cover_image}`}
                       alt={post.title}
+                      width={128}
+                      height={80}
+                      unoptimized
                       className="w-full md:w-32 h-20 object-cover rounded-xl border border-slate-200"
                     />
                   ) : (

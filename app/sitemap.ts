@@ -28,7 +28,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }));
 
     // 2. TÜM Ürünleri Sayfalayarak Çek (Supabase 1000 limitini aşmak için)
-    let allProducts: any[] = [];
+    type ProductRouteItem = {
+      sku: string;
+      created_at?: string | null;
+    };
+
+    let allProducts: ProductRouteItem[] = [];
     let page = 0;
     const pageSize = 1000; // Her istekte çekilecek maksimum satır sayısı
     let hasMore = true;

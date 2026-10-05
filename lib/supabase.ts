@@ -41,7 +41,7 @@ export interface ProductVehicle {
 }
 
 export interface Product {
-  id: number; sku: string; title: string; category_id: number | null;
+  id: number; sku: string; title: string; category_id?: number | null;
   pin_count: number; image_url?: string | null; is_new?: boolean;
   is_active?: boolean; sort_order?: number; created_at?: string;
   categories?: Category | null;
@@ -91,13 +91,13 @@ const db = {
     return data as T;
   },
   
-  insert: async <T>(table: Table, data: any) => {
-    const { data: result, error } = await supabase.from(table).insert(data).select().single();
+  insert: async <T>(table: Table, data: Record<string, unknown> | Array<Record<string, unknown>>) => {
+    const { data: result, error } = await supabase.from(table).insert(data as never).select().single();
     if (error) throw error;
     return result as T;
   },
   
-  update: async (table: Table, id: number, data: any) => {
+  update: async (table: Table, id: number, data: Record<string, unknown>) => {
     const { error } = await supabase.from(table).update(data).eq('id', id);
     if (error) throw error;
   },
@@ -119,11 +119,12 @@ export const productService = {
   getAll: () => db.getAll<Product>('products', productSelect),
   getById: (id: number) => db.getById<Product>('products', id, productSelect),
   
-  create: async (data: any, codes: any[], brandIds: number[], image?: File) => {
-    data.sku = data.sku || generateSkuUtil();
-    if (image) data.image_url = await storage.upload(image, `products/${data.sku}.${image.name.split('.').pop()}`);
+  create: async (data: Record<string, unknown>, codes: Array<{ code_type: 'OEM' | 'MUADIL' | 'URETICI'; code_value: string }>, brandIds: number[], image?: File) => {
+    const productData = { ...data } as Record<string, unknown>;
+    productData.sku = productData.sku ?? generateSkuUtil();
+    if (image) productData.image_url = await storage.upload(image, `products/${String(productData.sku)}.${image.name.split('.').pop()}`);
     
-    const product = await db.insert<Product>('products', data);
+    const product = await db.insert<Product>('products', productData);
     
     const relations = [
       codes?.length && db.insert('product_codes', codes.map(c => ({ ...c, product_id: product.id }))),
@@ -134,14 +135,15 @@ export const productService = {
     return product;
   },
   
-  update: async (id: number, data: any, codes: any[], brandIds: number[], image?: File) => {
+  update: async (id: number, data: Record<string, unknown>, codes: Array<{ code_type: 'OEM' | 'MUADIL' | 'URETICI'; code_value: string }>, brandIds: number[], image?: File) => {
+    const nextData = { ...data } as Record<string, unknown>;
     if (image) {
       const old = await db.getById<Product>('products', id, 'image_url');
       if (old?.image_url) await storage.delete(old.image_url);
-      data.image_url = await storage.upload(image, `products/${data.sku || old.sku}.${image.name.split('.').pop()}`);
+      nextData.image_url = await storage.upload(image, `products/${String(nextData.sku ?? old.sku)}.${image.name.split('.').pop()}`);
     }
     
-    await db.update('products', id, data);
+    await db.update('products', id, nextData);
     await Promise.all([
       db.delete('product_codes', id, 'product_id'),
       db.delete('product_vehicles', id, 'product_id')

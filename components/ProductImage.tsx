@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 
 interface ProductImageProps {
   sku: string;
@@ -14,8 +14,10 @@ export default function ProductImage({ sku, title, storageUrl }: ProductImagePro
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    setRetryCount(0);
-    setImgSrc(`${storageUrl}/${sku}.jpg`);
+    startTransition(() => {
+      setRetryCount(0);
+      setImgSrc(`${storageUrl}/${sku}.jpg`);
+    });
   }, [sku, storageUrl]);
 
   const handleError = () => {

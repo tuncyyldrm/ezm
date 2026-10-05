@@ -41,8 +41,9 @@ export default function LoginPage() {
       // 3. Güvenli Yönlendirme Sıralaması
       router.push('/admin');
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Bir hata oluştu.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Bir hata oluştu.';
+      setError(message);
     } finally {
       setLoading(false);
     }

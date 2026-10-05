@@ -1,13 +1,25 @@
 // app/admin/products/new/page.tsx
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import Image from "next/image";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { normalizeSearchText } from "@/lib/search";
 
 export const dynamic = 'force-dynamic';
 
 const BUCKET_URL = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
+
+type CategoryOption = {
+  id: number;
+  name: string;
+};
+
+type ProductCodeForm = {
+  code_value: string;
+  code_type: string;
+};
 
 // 🌟 1. ASIL FORM İÇERİĞİ VE MANTIK ALANI (useSearchParams burada güvenle çalışır)
 function ProductFormContent() {
@@ -15,7 +27,7 @@ function ProductFormContent() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
 
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -33,14 +45,12 @@ function ProductFormContent() {
     sort_order: 0,
   });
 
-  useEffect(() => {
-    supabase.from("categories").select("*").order("name").then(({ data }) => setCategories(data || []));
-    if (editId) loadProduct();
-  }, [editId]);
+  const loadProduct = useCallback(async () => {
+    if (!editId) return;
 
-  const loadProduct = async () => {
-    const { data: p } = await supabase.from("products").select("*, product_codes(*), product_vehicles(*, brands(*))").eq("id", editId).single();
-    if (!p) return;
+    const { data: p, error } = await supabase.from("products").select("*, product_codes(*), product_vehicles(*, brands(*))").eq("id", editId).single();
+    if (error) throw error;
+    if (!p) throw new Error("Düzenlenecek ürün bulunamadı.");
 
     setFormData({
       title: p.title,
@@ -52,41 +62,107 @@ function ProductFormContent() {
       sort_order: p.sort_order || 0,
     });
     setPreviewUrl(`${BUCKET_URL}/${p.sku}.jpg`);
-    if (p.product_codes?.length) setCodes(p.product_codes.map((c: any) => ({ code_value: c.code_value, code_type: c.code_type })));
-    if (p.product_vehicles?.length) setBrands(p.product_vehicles.map((v: any) => v.brands?.name).filter(Boolean));
-  };
+    if (p.product_codes?.length) setCodes(p.product_codes.map((c: ProductCodeForm) => ({ code_value: c.code_value, code_type: c.code_type })));
+    if (p.product_vehicles?.length) {
+      const productBrandNames = p.product_vehicles
+        .map((v: { brands?: { name?: string | null } | null }) => v.brands?.name)
+        .filter((name: string | null | undefined): name is string => Boolean(name));
+      setBrands(productBrandNames);
+    }
+  }, [editId]);
 
-  const updateForm = (key: string, value: any) => setFormData(prev => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    let active = true;
+
+    const loadFormData = async () => {
+      const { data, error } = await supabase.from("categories").select("*").order("name");
+      if (error) throw error;
+      if (active) setCategories(data || []);
+      await loadProduct();
+    };
+
+    void loadFormData().catch(error => {
+      if (!active) return;
+      console.error("Ürün formu yükleme hatası:", error);
+      alert(error instanceof Error ? error.message : "Ürün formu yüklenemedi.");
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [loadProduct]);
+
+  const updateForm = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) => setFormData(prev => ({ ...prev, [key]: value }));
+
+  const addBrand = () => {
+    const name = brandInput.trim();
+    if (!name) return;
+
+    if (brands.some(brand => normalizeSearchText(brand) === normalizeSearchText(name))) {
+      setBrandInput("");
+      return;
+    }
+
+    setBrands(prev => [...prev, name]);
+    setBrandInput("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      const selectedCategoryId = Number(formData.category_id);
+      if (!formData.category_id || Number.isNaN(selectedCategoryId)) {
+        alert("Kategori seçimi zorunludur.");
+        setLoading(false);
+        return;
+      }
+
       if (imageFile) {
-        await supabase.storage.from("product-images").upload(
-          `${formData.sku.trim()}.jpg`,  // ← uzantıyı sabitledik
+        const { error } = await supabase.storage.from("product-images").upload(
+          `${formData.sku.trim()}.jpg`,
           imageFile,
           { upsert: true }
         );
+        if (error) throw new Error(`Ürün görseli yüklenemedi: ${error.message}`);
       }
 
-      const brandObjects = brands.map(name => ({
+      const selectedBrands = [...brands];
+      const pendingBrand = brandInput.trim();
+      if (
+        pendingBrand &&
+        !selectedBrands.some(brand => normalizeSearchText(brand) === normalizeSearchText(pendingBrand))
+      ) {
+        selectedBrands.push(pendingBrand);
+      }
+
+      const brandObjects = selectedBrands.map(name => ({
         name,
         slug: name.toLowerCase().replace(/[ğüşıöç]/g, c => ({ ğ: 'g', ü: 'u', ş: 's', ı: 'i', ö: 'o', ç: 'c' }[c] || c)).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
       }));
 
-      const { data: insertedBrands } = await supabase.from("brands").upsert(brandObjects, { onConflict: "name" }).select("id");
-      const brandIds = insertedBrands?.map(b => b.id) || [];
+      let brandIds: number[] = [];
+      if (brandObjects.length) {
+        const { data: insertedBrands, error } = await supabase
+          .from("brands")
+          .upsert(brandObjects, { onConflict: "name" })
+          .select("id");
+        if (error) throw new Error(`Markalar kaydedilemedi: ${error.message}`);
+        brandIds = insertedBrands?.map(b => b.id) || [];
+      }
 
-      const productPayload = { ...formData, sku: formData.sku.trim().toUpperCase(), category_id: formData.category_id ? Number(formData.category_id) : null };
+      const productPayload = { ...formData, sku: formData.sku.trim().toUpperCase(), category_id: selectedCategoryId };
       let productId = Number(editId);
 
       if (editId) {
-        await supabase.from("products").update(productPayload).eq("id", productId);
-        await Promise.all([
+        const { error } = await supabase.from("products").update(productPayload).eq("id", productId);
+        if (error) throw new Error(`Ürün güncellenemedi: ${error.message}`);
+        const [codesDelete, vehiclesDelete] = await Promise.all([
           supabase.from("product_codes").delete().eq("product_id", productId),
           supabase.from("product_vehicles").delete().eq("product_id", productId)
         ]);
+        if (codesDelete.error) throw new Error(`Ürün kodları güncellenemedi: ${codesDelete.error.message}`);
+        if (vehiclesDelete.error) throw new Error(`Ürün marka ilişkileri güncellenemedi: ${vehiclesDelete.error.message}`);
       } else {
         const { data: newP, error } = await supabase
           .from("products")
@@ -101,13 +177,21 @@ function ProductFormContent() {
       }
 
       const validCodes = codes.filter(c => c.code_value.trim());
-      if (validCodes.length) await supabase.from("product_codes").insert(validCodes.map(c => ({ product_id: productId, code_value: c.code_value.trim().toUpperCase(), code_type: c.code_type })));
-      if (brandIds.length) await supabase.from("product_vehicles").insert(brandIds.map(bId => ({ product_id: productId, brand_id: bId })));
+      if (validCodes.length) {
+        const { error } = await supabase.from("product_codes").insert(validCodes.map(c => ({ product_id: productId, code_value: c.code_value.trim().toUpperCase(), code_type: c.code_type })));
+        if (error) throw new Error(`Ürün kodları kaydedilemedi: ${error.message}`);
+      }
+      if (brandIds.length) {
+        const { error } = await supabase.from("product_vehicles").insert(brandIds.map(bId => ({ product_id: productId, brand_id: bId })));
+        if (error) throw new Error(`Ürün marka ilişkileri kaydedilemedi: ${error.message}`);
+      }
 
       router.push("/admin/products");
       router.refresh();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Bir hata oluştu.";
+      alert(message);
+    } finally {
       setLoading(false);
     }
   };
@@ -157,7 +241,7 @@ function ProductFormContent() {
 
               <div>
                 <label className={labelStyle}>Kategori</label>
-                <select value={formData.category_id} onChange={e => updateForm("category_id", e.target.value)} className={inputStyle}>
+                <select value={formData.category_id} onChange={e => updateForm("category_id", e.target.value)} className={inputStyle} required>
                   <option value="">Seçim Yapın</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -198,7 +282,7 @@ function ProductFormContent() {
             <div className="relative group">
               <div className="bg-slate-100 rounded-2xl overflow-hidden border-2 border-dashed border-slate-200 flex items-center justify-center transition-all group-hover:border-indigo-300">
                 {previewUrl ? (
-                  <img src={previewUrl} className="w-full h-full object-cover" alt="Önizleme" />
+                  <Image src={previewUrl} className="w-full h-full object-cover" alt="Önizleme" width={1200} height={800} unoptimized />
                 ) : (
                   <div className="text-center p-6">
                     <span className="text-4xl block mb-2">📸</span>
@@ -217,7 +301,28 @@ function ProductFormContent() {
           <div className={sectionCard}>
             <h2 className={labelStyle}>Uyumlu Markalar</h2>
             <div className="flex gap-2">
-              <input type="text" value={brandInput} onChange={e => setBrandInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), brandInput.trim() && !brands.includes(brandInput.trim()) && (setBrands([...brands, brandInput.trim()]), setBrandInput("")))} placeholder="Marka..." className={inputStyle} />
+              <input
+                type="text"
+                value={brandInput}
+                onChange={e => setBrandInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addBrand();
+                  }
+                }}
+                placeholder="Marka..."
+                className={inputStyle}
+                aria-label="Uyumlu marka adı"
+              />
+              <button
+                type="button"
+                onClick={addBrand}
+                disabled={!brandInput.trim()}
+                className="shrink-0 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Ekle
+              </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {brands.map(brand => (

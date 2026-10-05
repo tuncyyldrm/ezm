@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 
 interface SocketImageProps {
   src: string;
@@ -14,18 +14,20 @@ export default function SocketImage({ src, alt, socketCode }: SocketImageProps) 
   const [liveSrc, setLiveSrc] = useState('');
 
   useEffect(() => {
-    if (!src) { 
-      setHasImage(false); 
-      return; 
-    }
-    
-    // Temiz statik link ile eşle
-    setLiveSrc(src);
+    startTransition(() => {
+      if (!src) { 
+        setHasImage(false); 
+        return; 
+      }
+      
+      // Temiz statik link ile eşle
+      setLiveSrc(src);
 
-    const img = new Image();
-    img.onload = () => setHasImage(true);
-    img.onerror = () => setHasImage(false);
-    img.src = src; 
+      const img = new Image();
+      img.onload = () => setHasImage(true);
+      img.onerror = () => setHasImage(false);
+      img.src = src; 
+    });
   }, [src]);
 
   if (!socketCode) return null;
