@@ -97,17 +97,21 @@ export async function GET() {
 function resolveTargetUrl(value: string) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr";
   const site = new URL(siteUrl);
+
+  if (value.startsWith("//")) return null;
+
   const target = new URL(value, site);
 
-  if (
-    target.protocol !== "https:" ||
-    target.origin !== site.origin ||
-    value.startsWith("//")
-  ) {
+  if (target.username || target.password) {
     return null;
   }
 
-  return `${target.pathname}${target.search}${target.hash}`;
+  if (target.origin === site.origin) {
+    return `${target.pathname}${target.search}${target.hash}`;
+  }
+
+  if (target.protocol !== "https:") return null;
+  return target.href;
 }
 
 export async function POST(request: Request) {
@@ -145,7 +149,7 @@ export async function POST(request: Request) {
   const targetUrl = resolveTargetUrl(input.url.trim());
   if (!targetUrl) {
     return NextResponse.json(
-      { error: "Bağlantı, sitenizin kendi HTTPS adresi olmalıdır." },
+      { error: "Site içi bağlantı veya geçerli bir HTTPS dış bağlantı girin." },
       { status: 400 }
     );
   }

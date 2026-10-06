@@ -163,7 +163,7 @@ export default function AdminNotificationsPage() {
             className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 font-normal outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
           <span className="mt-1 block text-xs font-normal text-slate-500">
-            Sitenizin iç bağlantısını girin; ör. / veya /product/urun-kodu
+            Site içi adres (/) veya Instagram gibi HTTPS bağlantısı girin.
           </span>
         </label>
 

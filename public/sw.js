@@ -21,19 +21,32 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const requestedUrl = new URL(event.notification.data?.url || "/", self.location.origin);
+  let requestedUrl;
+  try {
+    requestedUrl = new URL(event.notification.data?.url || "/", self.location.origin);
+  } catch {
+    requestedUrl = new URL("/", self.location.origin);
+  }
+
+  const isSameOrigin = requestedUrl.origin === self.location.origin;
   const targetUrl =
-    requestedUrl.origin === self.location.origin
+    isSameOrigin || requestedUrl.protocol === "https:"
       ? requestedUrl.href
       : self.location.origin;
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      const matchingClient = clients.find((client) => new URL(client.url).origin === self.location.origin);
-      if (matchingClient) {
-        return matchingClient.navigate(targetUrl).then(() => matchingClient.focus());
-      }
-      return self.clients.openWindow(targetUrl);
-    })
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        if (isSameOrigin) {
+          const matchingClient = clients.find(
+            (client) => new URL(client.url).origin === self.location.origin
+          );
+          if (matchingClient) {
+            return matchingClient.navigate(targetUrl).then((client) => client?.focus());
+          }
+        }
+        return self.clients.openWindow(targetUrl);
+      })
   );
 });
