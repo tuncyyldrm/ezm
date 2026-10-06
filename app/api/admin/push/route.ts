@@ -98,20 +98,22 @@ function resolveTargetUrl(value: string) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr";
   const site = new URL(siteUrl);
 
-  if (value.startsWith("//")) return null;
+  try {
+    if (value.startsWith("//")) return null;
+    const target = new URL(value, site);
+    if (target.username || target.password) {
+      return null;
+    }
 
-  const target = new URL(value, site);
+    if (target.origin === site.origin) {
+      return `${target.pathname}${target.search}${target.hash}`;
+    }
 
-  if (target.username || target.password) {
+    if (target.protocol !== "https:") return null;
+    return target.href;
+  } catch {
     return null;
   }
-
-  if (target.origin === site.origin) {
-    return `${target.pathname}${target.search}${target.hash}`;
-  }
-
-  if (target.protocol !== "https:") return null;
-  return target.href;
 }
 
 export async function POST(request: Request) {

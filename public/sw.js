@@ -18,8 +18,8 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "EZM OTO";
   const options = {
     body: payload.body || "Yeni bir duyurumuz var.",
-    icon: "/android-chrome-192x192.png",
-    badge: "/favicon-32x32.png",
+    icon: "/notification-icon.png",
+    badge: "/notification-icon.png",
     data: { url: payload.url || "/" },
   };
 

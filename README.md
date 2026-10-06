@@ -39,7 +39,7 @@ Push bildirimleri, izin veren ziyaretçilere indirim ve duyuruları tarayıcı/c
 4. Aynı ortam değişkenlerini üretim ortamına ekleyip siteyi HTTPS üzerinden yayınlayın. Bildirim gönderen kullanıcı Supabase `app_metadata.role` alanında `admin` rolüne sahip olmalıdır.
 5. Ziyaretçiler sayfa altındaki **Bildirimleri Aç** düğmesiyle açıkça izin verebilir; aboneliklerini aynı alandan kapatabilir. iPhone/iPad'de Web Push için siteyi önce Safari üzerinden ana ekrana eklemek gerekir.
 
-Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlantıları kabul eder. HTTP, JavaScript ve protokol-göreli bağlantılara izin verilmez. Bildirim tıklandığında site içi sayfa uygulamada açılır; dış bağlantı yeni bir tarayıcı penceresi/sekmesi olarak açılır.
+Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlantıları kabul eder. HTTP, JavaScript ve protokol-göreli bağlantılara izin verilmez. Bildirim tıklandığında site içi sayfa uygulamada açılır; dış bağlantı tarayıcıda yeni bir sekme/pencere olarak açılır.
 
 ## Komutlar
 
