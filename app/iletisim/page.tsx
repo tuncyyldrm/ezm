@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import Link from "next/link";
+import InstallAppCard from "@/components/InstallAppCard";
 
 export const metadata: Metadata = {
   title: "İletişim | EZM Oto Yedek Parça & Aksesuar",
@@ -73,29 +74,20 @@ const contactCards = [
     buttonText: "0554 658 85 56",
     tone: "blue",
   },
+];
+
+const otherChannels = [
   {
-    icon: "🛒",
-    title: "Trendyol Mağazamız",
-    text: "Ürünlerimizi Trendyol mağazamız üzerinden inceleyebilir ve güvenli şekilde sipariş verebilirsiniz.",
+    title: "Trendyol",
     href: "https://www.trendyol.com/magaza/ezm-oto-m-1258548?sst=0",
-    buttonText: "Trendyol Mağazasına Git",
-    tone: "orange",
   },
   {
-    icon: "🛍️",
-    title: "N11 Mağazamız",
-    text: "Ürünlerimizi N11 mağazamız üzerinden inceleyebilir ve güvenli şekilde sipariş verebilirsiniz.",
+    title: "N11",
     href: "https://www.n11.com/magaza/ezmoto",
-    buttonText: "N11 Mağazasına Git",
-    tone: "pink",
   },
   {
-    icon: "📸",
     title: "Instagram",
-    text: "Son ürünler, kampanyalar ve güncel stok bilgilerini Instagram üzerinden takip edin.",
     href: "https://www.instagram.com/ezm_oto/",
-    buttonText: "Instagram'da Takip Et",
-    tone: "purple",
   },
 ];
 
@@ -132,25 +124,19 @@ export default function IletisimPage() {
       </section>
 
       <section className="max-w-6xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-5 md:grid-cols-2">
           {contactCards.map((card) => (
             <article
               key={card.title}
-              className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between"
+              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
             >
               <div>
                 <div
-                  className={`w-12 h-12 rounded-xl ${
+                  className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-2xl ${
                     card.tone === "emerald"
                       ? "bg-emerald-100 text-emerald-600"
-                      : card.tone === "blue"
-                        ? "bg-blue-100 text-blue-600"
-                        : card.tone === "orange"
-                          ? "bg-orange-100 text-orange-600"
-                          : card.tone === "purple"
-                            ? "bg-violet-100 text-violet-600"
-                            : "bg-pink-100 text-pink-600"
-                  } flex items-center justify-center text-2xl mb-4`}
+                      : "bg-blue-100 text-blue-600"
+                  }`}
                 >
                   {card.icon}
                 </div>
@@ -158,8 +144,7 @@ export default function IletisimPage() {
                 <h3 className="text-lg font-bold text-slate-900 mb-1">
                   {card.title}
                 </h3>
-
-                <p className="text-sm text-slate-500 mb-4">{card.text}</p>
+                <p className="mb-5 text-sm text-slate-500">{card.text}</p>
               </div>
 
               <a
@@ -167,61 +152,38 @@ export default function IletisimPage() {
                 target={card.href.startsWith("http") ? "_blank" : undefined}
                 rel={card.href.startsWith("http") ? "noopener noreferrer" : undefined}
                 title={card.title}
-                className={`inline-flex items-center justify-center w-full py-2.5 px-4 rounded-xl text-sm font-medium transition-colors ${
+                className={`inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition-colors ${
                   card.tone === "emerald"
                     ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                    : card.tone === "blue"
-                      ? "bg-blue-600 hover:bg-blue-700 text-white"
-                      : card.tone === "orange"
-                        ? "bg-orange-500 hover:bg-orange-600 text-white"
-                        : card.tone === "purple"
-                          ? "bg-violet-600 hover:bg-violet-700 text-white"
-                          : "bg-pink-500 hover:bg-pink-600 text-white"
+                    : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
                 {card.buttonText}
               </a>
             </article>
           ))}
-
-          <article className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl mb-4">
-                ⏰
-              </div>
-
-              <h3 className="text-lg font-bold text-slate-900 mb-1">
-                Çalışma Saatleri
-              </h3>
-
-              <ul className="text-sm text-slate-600 space-y-2 mb-4">
-                {businessHours.map((item) => (
-                  <li key={item.label} className="flex justify-between gap-3">
-                    <span>{item.label}:</span>
-                    <span
-                      className={
-                        item.value === "Kapalı"
-                          ? "text-slate-400 font-medium"
-                          : "font-semibold text-slate-900 whitespace-nowrap"
-                      }
-                    >
-                      {item.value}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="text-xs text-slate-400 bg-slate-50 p-2.5 rounded-lg text-center border border-slate-100">
-              Online katalog üzerinden 7/24 parça inceleyebilirsiniz.
-            </div>
-          </article>
         </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm">
+        <div className="mx-auto mt-6 flex max-w-4xl flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <span className="font-medium text-slate-500">Diğer kanallar:</span>
+          {otherChannels.map((channel) => (
+            <a
+              key={channel.title}
+              href={channel.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-blue-700 underline-offset-4 hover:underline"
+            >
+              {channel.title}
+              <span className="sr-only"> (yeni sekmede açılır)</span>
+            </a>
+          ))}
+        </div>
+
+        <div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Mağaza & Depo Adresi</h2>
+              <h2 className="text-xl font-bold text-slate-900">Adres ve Çalışma Saatleri</h2>
               <p className="text-sm text-slate-600 mt-1">
                 Yeni Sanayi Sitesi, Merkez / Isparta
               </p>
@@ -238,46 +200,43 @@ export default function IletisimPage() {
             </a>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-6">
-              <div className="space-y-4 text-sm text-slate-600">
-                <div>
-                  <p className="font-semibold text-slate-900 mb-1">Adres</p>
-                  <p>Yeni Sanayi Sitesi</p>
-                  <p>Merkez / Isparta</p>
-                  <p>Türkiye</p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-slate-900 mb-1">İletişim</p>
-                  <p>Telefon: +90 554 658 85 56</p>
-                  <p>WhatsApp: +90 554 658 85 56</p>
-                </div>
-
-                <div>
-                  <p className="font-semibold text-slate-900 mb-1">Hizmet</p>
-                  <p>Parça sorgulama, stok kontrolü, toplu sipariş ve perakende satış</p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-5">
+              <h3 className="mb-3 font-semibold text-slate-900">Çalışma Saatleri</h3>
+              <ul className="space-y-2 text-sm text-slate-600">
+                {businessHours.map((item) => (
+                  <li key={item.label} className="flex justify-between gap-3">
+                    <span>{item.label}</span>
+                    <span className={item.value === "Kapalı" ? "text-slate-400" : "font-semibold text-slate-900"}>
+                      {item.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 border-t border-slate-200 pt-3 text-xs text-slate-500">
+                Online kataloğumuzu 7/24 inceleyebilirsiniz.
+              </p>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-6 flex flex-col justify-between gap-4">
+            <div className="flex flex-col justify-between gap-5 rounded-xl border border-slate-100 bg-slate-50 p-5">
               <div>
-                <h4 className="font-semibold text-slate-900 mb-2">Elden Teslimat</h4>
-                <p className="text-sm text-slate-600">
-                  Isparta içi arızalı veya eşleşmeyen parçalarınızı getirip birebir karşılaştırma yapabilirsiniz.
+                <h3 className="mb-2 font-semibold text-slate-900">Elden Teslimat</h3>
+                <p className="text-sm leading-relaxed text-slate-600">
+                  Isparta&apos;da parça numunesiyle mağazamıza uğrayıp ürün
+                  karşılaştırması için destek alabilirsiniz.
                 </p>
               </div>
 
               <Link
                 href="/"
-                className="inline-flex items-center justify-center px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium rounded-xl transition-colors whitespace-nowrap"
+                className="inline-flex w-fit items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
               >
                 Kataloğa Dön
               </Link>
             </div>
           </div>
         </div>
+        <InstallAppCard />
       </section>
     </main>
   );

@@ -7,7 +7,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import ScrollRestorationManager from "@/components/ScrollRestorationManager";
 import CoreStatusMonitor from "@/components/CoreStatusMonitor";
 import CookieBanner from "@/components/CookieBanner";
-import InstallPrompt from "@/components/InstallPrompt";
+import PushSubscriptionControl from "@/components/PushSubscriptionControl";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -127,7 +127,7 @@ const globalStoreSchema = {
       "Saturday",
     ],
     opens: "08:30",
-    closes: "19:00",
+    closes: "18:30",
   },
 };
 
@@ -248,7 +248,8 @@ export default function RootLayout({
           role="contentinfo"
         >
           <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            
+            <PushSubscriptionControl />
+
             <div className="flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
               
               {/* COPYRIGHT */}
@@ -297,7 +298,6 @@ export default function RootLayout({
         <ScrollRestorationManager />
         <CoreStatusMonitor />
         <CookieBanner />
-        <InstallPrompt />
       </body>
     </html>
   );

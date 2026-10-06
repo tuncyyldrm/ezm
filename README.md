@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EZM OTO
 
-## Getting Started
+EZM OTO, otomotiv yedek parça kataloğu için Next.js App Router, React ve Supabase kullanan bir web uygulamasıdır.
 
-First, run the development server:
+## Geliştirme
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Uygulama `http://localhost:3000` adresinde açılır. Gerekli Supabase ortam değişkenlerini `.env.local` dosyasında tanımlayın.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Push bildirimlerini yapılandırma
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Push bildirimleri, izin veren ziyaretçilere indirim ve duyuruları tarayıcı/cihaz bildirimi olarak gönderir. Gönderimleri admin panelindeki **Bildirimler** sayfasından yapabilirsiniz.
 
-## Learn More
+1. Supabase SQL Editor'da [`scripts/push-notifications.sql`](./scripts/push-notifications.sql) içeriğini çalıştırın.
+2. VAPID anahtarlarını üretin:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. `.env.local` dosyanıza aşağıdaki değerleri ekleyin. VAPID private key ile Supabase service-role key yalnızca sunucuda tutulmalıdır; `NEXT_PUBLIC_` öneki eklemeyin.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```env
+   NEXT_PUBLIC_SITE_URL=https://ezmoto.com.tr
+   NEXT_PUBLIC_SUPABASE_URL=
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=
+   SUPABASE_SERVICE_ROLE_KEY=
+   NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+   VAPID_PRIVATE_KEY=
+   VAPID_SUBJECT=mailto:info@ezmoto.com.tr
+   ```
 
-## Deploy on Vercel
+   Değişken adları için [`.env.example`](./.env.example) dosyasına da bakabilirsiniz.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Aynı ortam değişkenlerini üretim ortamına ekleyip siteyi HTTPS üzerinden yayınlayın. Bildirim gönderen kullanıcı Supabase `app_metadata.role` alanında `admin` rolüne sahip olmalıdır.
+5. Ziyaretçiler sayfa altındaki **Bildirimleri Aç** düğmesiyle açıkça izin verebilir; aboneliklerini aynı alandan kapatabilir. iPhone/iPad'de Web Push için siteyi önce Safari üzerinden ana ekrana eklemek gerekir.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Admin gönderim aracı yalnızca aynı sitenin HTTPS bağlantılarına izin verir. Bildirim tıklandığında kullanıcı o sayfaya yönlendirilir.
+
+## Komutlar
+
+```bash
+npm run lint
+npm run build
+```

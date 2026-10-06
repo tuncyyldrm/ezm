@@ -63,7 +63,24 @@ export default function CookiePolicyPage() {
 
         <section>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            4. İletişim
+            4. Push Bildirimleri
+          </h2>
+          <p className="mb-3">
+            Bildirimler yalnızca ilgili düğme üzerinden izin veren ziyaretçilere gönderilir. Abonelik
+            sırasında tarayıcının oluşturduğu cihaz bildirim adresi ve teknik anahtarlar, kampanya ve
+            site duyurularını iletmek amacıyla Supabase altyapısında saklanır. Bildirim başlığı, mesajı
+            ve bağlantısı tarayıcınızın push hizmeti üzerinden cihazınıza ulaştırılır.
+          </p>
+          <p>
+            Bildirim aboneliğinizi site altındaki <strong>Bildirimleri Kapat</strong> düğmesiyle
+            kaldırabilirsiniz. Abonelik kaldırıldığında kayıtlı cihaz adresi sistemimizden silinir.
+            Tarayıcı veya cihaz ayarlarından bildirim iznini kapatmanız da mümkündür.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            5. İletişim
           </h2>
           <p>
             Çerez politikamız veya KVKK kapsamındaki haklarınızla ilgili her türlü soru, görüş ve önerileriniz için bizimle doğrudan web sitemizde yer alan iletişim kanalları üzerinden irtibata geçebilirsiniz.
