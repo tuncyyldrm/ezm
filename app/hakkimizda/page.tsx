@@ -4,19 +4,20 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Hakkımızda | EZM Oto Yedek Parça & Aksesuar',
   description:
-    'EZM Oto Yedek Parça ve Aksesuar; Isparta merkezli, geniş ürün yelpazesi, OEM ve muadil elektrik aksamı, sensör, soket ve aydınlatma ürünleri ile güvenilir çözüm ortağınızdır.',
+    'Isparta merkezli EZM Oto; araç elektrik soketi, tesisat kablosu, sensör, röle ve aydınlatma ürünleri için yedek parça kataloğu ve parça sorgulama desteği sunar.',
   keywords: [
     'EZM Oto',
     'Isparta oto yedek parça',
     'oto elektrik soket',
     'oto sensör',
     'OEM yedek parça',
-    'EZM Oto Aksesuar'
+    'EZM Oto Aksesuar',
+    'Isparta oto elektrik yedek parça',
   ],
   openGraph: {
     title: 'Hakkımızda | EZM Oto Yedek Parça & Aksesuar',
     description:
-      'Geniş ürün yelpazemiz ve kaliteli hizmet anlayışımızla otomotiv yedek parça sektöründe yanınızdayız.',
+      'EZM Oto’nun ürün gruplarını, parça sorgulama yaklaşımını ve müşterilerine sunduğu iletişim kanallarını keşfedin.',
     url: 'https://ezmoto.com.tr/hakkimizda',
     siteName: 'EZM Oto',
     locale: 'tr_TR',
@@ -37,7 +38,7 @@ export default function HakkimizdaPage() {
             Hakkımızda
           </h1>
           <p className="text-blue-100 text-base sm:text-lg max-w-2xl mx-auto">
-            Otomotiv yedek parça ve elektrik aksamında doğru parça, dürüst ticaret ve güvenilir hizmet.
+            Aradığınız otomotiv yedek parçasına ulaşmanız için anlaşılır bir katalog ve doğrudan iletişim.
           </p>
         </div>
       </section>
@@ -51,10 +52,10 @@ export default function HakkimizdaPage() {
               Biz Kimiz?
             </h2>
             <p className="text-slate-600 leading-relaxed">
-              <strong>EZM Oto Yedek Parça & Aksesuar</strong> olarak, Isparta merkezli faaliyet gösteren 
-              ve Türkiye genelinde dijital kataloğumuz üzerinden hizmet veren bir otomotiv yedek parça tedarikçisiyiz. 
-              Özellikle araç elektrik soketleri, tesisat kabloları, sensörler, anahtarlar, röleler ve aydınlatma 
-              grubu gibi hassas ve kritik bileşenlerde geniş ürün stoğumuzla sektöre değer katıyoruz.
+              <strong>EZM Oto Yedek Parça &amp; Aksesuar</strong>, Isparta merkezli bir otomotiv yedek parça işletmesidir.
+              Dijital kataloğumuzda araç elektrik soketleri, tesisat kabloları, sensörler, anahtarlar,
+              röleler ve aydınlatma ürünleri gibi parça gruplarını inceleyebilirsiniz. Aradığınız ürünün
+              uygunluğundan emin değilseniz, ürün kodu veya araç bilgileriyle bize danışabilirsiniz.
             </p>
           </div>
 
@@ -66,8 +67,8 @@ export default function HakkimizdaPage() {
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">Misyonumuz</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Müşterilerimizin ve ustalarımızın aradığı doğru OEM veya muadil parçayı en hızlı şekilde bulmasını sağlamak; 
-                şeffaf stok yönetimi, adil fiyat politikası ve güvenli alışveriş deneyimiyle parça tedariğindeki karmaşayı ortadan kaldırmak.
+                Parça arayan sürücü ve ustalara ürün bilgilerini anlaşılır biçimde sunmak; doğru ürünü
+                araştırma sürecinde katalog ve doğrudan iletişim kanallarıyla yardımcı olmak.
               </p>
             </div>
 
@@ -77,49 +78,56 @@ export default function HakkimizdaPage() {
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">Vizyonumuz</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Otomotiv yedek parça ve özellikle oto elektrik soket/sensör alanında Türkiye’nin en kapsamlı, 
-                hızlı taranabilir dijital kataloğu ve en güvenilen tedarikçilerinden biri olmak.
+                Oto elektrik ve yedek parça ürünlerini kolayca bulunabilir hale getiren, kullanışlı ve
+                güvenilir bir dijital katalog sunmayı sürdürmek.
               </p>
             </div>
           </div>
 
-          {/* Neden EZM Oto? */}
+          {/* Müşterilere sunduğumuz destek */}
           <div className="pt-4">
             <h2 className="text-2xl font-bold text-slate-900 mb-4 border-l-4 border-blue-600 pl-3">
-              Neden EZM Oto?
+              Size Nasıl Yardımcı Oluyoruz?
             </h2>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-slate-700 text-sm">
               <li className="flex items-start gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <span className="text-green-600 font-bold">✓</span>
-                <span><strong>Geniş Ürün Çeşidi:</strong> Binlerce OEM referanslı soket, müşür, sensör ve röle çeşidi.</span>
+                <span><strong>Ürün kataloğu:</strong> Soket, kablo, sensör, anahtar, röle ve aydınlatma ürünlerini çevrim içi inceleyebilirsiniz.</span>
               </li>
               <li className="flex items-start gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <span className="text-green-600 font-bold">✓</span>
-                <span><strong>Birebir Uyum:</strong> Araç modellerine özel, denenmiş ve yüksek kaliteli hammaddeye sahip parçalar.</span>
+                <span><strong>Parça sorgulama:</strong> OEM numarası, ürün kodu veya araç bilgileriyle aradığınız parçayı danışabilirsiniz.</span>
               </li>
               <li className="flex items-start gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <span className="text-green-600 font-bold">✓</span>
-                <span><strong>Hızlı İletişim & Destek:</strong> WhatsApp ve telefon üzerinden parça kodu doğrulama ve anında destek.</span>
+                <span><strong>Doğrudan iletişim:</strong> Ürün ve sipariş sorularınız için WhatsApp veya telefon üzerinden bize ulaşabilirsiniz.</span>
               </li>
               <li className="flex items-start gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <span className="text-green-600 font-bold">✓</span>
-                <span><strong>Isparta İçi Elden / Türkiye Geneli Kargo:</strong> Hem yerel sanayi esnafına hem de tüm illere kesintisiz gönderim.</span>
+                <span><strong>Farklı alışveriş kanalları:</strong> Ürünlerimizi web kataloğumuzdan ve iletişim sayfamızda yer alan mağazalarımızdan inceleyebilirsiniz.</span>
               </li>
             </ul>
           </div>
 
-          {/* İletişime Geç Butonu */}
           <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h4 className="font-semibold text-slate-900">Aradığınız parçayı bulamadınız mı?</h4>
-              <p className="text-sm text-slate-500">Numune veya OEM kodu ile bize danışabilirsiniz.</p>
+              <p className="text-sm text-slate-500">OEM kodu, ürün kodu veya araç bilgilerinizle bize danışın.</p>
             </div>
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
-            >
-              Kataloğa Göz At
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Link
+                href="/iletisim"
+                className="inline-flex items-center justify-center px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+              >
+                Bize Ulaşın
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center px-6 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium rounded-lg border border-slate-200 transition-colors"
+              >
+                Ürün Kataloğu
+              </Link>
+            </div>
           </div>
         </div>
       </section>
