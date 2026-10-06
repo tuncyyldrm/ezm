@@ -7,6 +7,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import ScrollRestorationManager from "@/components/ScrollRestorationManager";
 import CoreStatusMonitor from "@/components/CoreStatusMonitor";
 import CookieBanner from "@/components/CookieBanner";
+import InstallPrompt from "@/components/InstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -296,6 +297,7 @@ export default function RootLayout({
         <ScrollRestorationManager />
         <CoreStatusMonitor />
         <CookieBanner />
+        <InstallPrompt />
       </body>
     </html>
   );
