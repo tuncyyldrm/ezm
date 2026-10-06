@@ -1,3 +1,11 @@
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   let payload = {};
 
@@ -29,16 +37,21 @@ self.addEventListener("notificationclick", (event) => {
   }
 
   const isSameOrigin = requestedUrl.origin === self.location.origin;
-  const targetUrl =
-    isSameOrigin || requestedUrl.protocol === "https:"
-      ? requestedUrl.href
+  const isExternalHttps = !isSameOrigin && requestedUrl.protocol === "https:";
+  const targetUrl = isSameOrigin
+    ? requestedUrl.href
+    : isExternalHttps
+      ? new URL(
+          `/bildirim-baglantisi?url=${encodeURIComponent(requestedUrl.href)}`,
+          self.location.origin
+        ).href
       : self.location.origin;
 
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clients) => {
-        if (isSameOrigin) {
+        if (isSameOrigin || isExternalHttps) {
           const matchingClient = clients.find(
             (client) => new URL(client.url).origin === self.location.origin
           );
