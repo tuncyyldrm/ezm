@@ -43,7 +43,9 @@ Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlan
 
 ## Site analizini yapılandırma
 
-Site trafiği için yalnızca Vercel Web Analytics kullanılır; olaylar Supabase'e yazılmaz ve sitede ayrı analiz tablosu/rapor API'si çalıştırılmaz. Vercel projesinde **Analytics > Enable** seçeneğini açıp yeni deployment yapın. İstatistikleri Vercel proje panelindeki **Analytics** bölümünden görüntüleyin. Çerez bildirimi kabul edilmeden ölçüm yüklenmez. Vercel'in Resilient Intake özelliği veri alımını iyileştirse de reklam engelleyicileri tamamen aşma garantisi vermez.
+Site trafiği için yalnızca Vercel Web Analytics kullanılır; olaylar Supabase'e yazılmaz ve sitede ayrı analiz tablosu yoktur. Vercel projesinde **Analytics > Enable** seçeneğini açın. Admin panelindeki **Site Analizi** raporu Vercel'in resmi Web Analytics API'sinden son 7/30/90 günlük toplam, günlük görüntüleme ve popüler sayfaları okur.
+
+Vercel'de Web Analytics API erişimi olan bir token oluşturup dağıtım ortamına `VERCEL_ANALYTICS_TOKEN` ve proje ayarlarındaki Project ID'yi `VERCEL_PROJECT_ID` olarak ekleyin. Takım projesiyse `VERCEL_TEAM_ID` de ekleyin. Bu değerler gizli sunucu ortam değişkenleri olarak tutulmalıdır; `NEXT_PUBLIC_` öneki kullanmayın. Vercel'in Resilient Intake özelliği veri alımını iyileştirse de reklam engelleyicileri tamamen aşma garantisi vermez. Çerez bildirimi kabul edilmeden ölçüm yüklenmez.
 
 Önceden `scripts/site-analytics.sql` çalıştırıp eski Supabase analiz tablosunu oluşturduysanız, artık kullanılmayacağı için isteğe bağlı olarak Supabase SQL Editor'da şu temizliği uygulayabilirsiniz (bu işlem eski analiz verilerini siler):
 
