@@ -41,6 +41,12 @@ Push bildirimleri, izin veren ziyaretçilere indirim ve duyuruları tarayıcı/c
 
 Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlantıları kabul eder. HTTP, JavaScript ve protokol-göreli bağlantılara izin verilmez. Bildirim tıklandığında site içi sayfa uygulamada açılır; dış bağlantı tarayıcıda yeni bir sekme/pencere olarak açılır.
 
+## Site analizini yapılandırma
+
+Site analizi, Google Analytics yerine aynı alan adındaki API üzerinden Supabase'e kayıt alır. Supabase SQL Editor'da [`scripts/site-analytics.sql`](./scripts/site-analytics.sql) içeriğini bir kez çalıştırın. Sunucu ortamında `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` ve gizli `SUPABASE_SERVICE_ROLE_KEY` tanımlı olmalıdır.
+
+Çerez bildirimi kabul edildiğinde herkese açık sayfalardaki görüntülemeler, aramalar, rastgele ziyaretçi/oturum kimlikleri, cihaz türü ve yönlendiren alan adı kaydedilir. IP adresi, ham user-agent ve URL sorgu parametreleri saklanmaz; çerez bildirimi reddedilirse analiz gönderilmez ve ölçüm kimlikleri temizlenir. Admin panelindeki **Site Analizi** sayfası 7/30/90 günlük görünüm, popüler sayfalar, aramalar ve cihaz dağılımını gösterir. Birinci taraf ölçüm Google Analytics'e göre reklam engelleyicilerden daha az etkilenebilir; tarayıcı veya ağ düzeyindeki engelleyicilerin ölçümü tamamen engellemesi yine mümkündür. İlk veri toplama SQL kurulumundan sonra başlar; eski ziyaret verileri geriye dönük oluşturulmaz.
+
 ## Komutlar
 
 ```bash

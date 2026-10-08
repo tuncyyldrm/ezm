@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase, Product } from '@/lib/supabase';
 import ProductImage from '@/components/ProductImage';
 import { createTurkishSearchPattern } from '@/lib/search';
+import { trackCustomEvent } from '@/components/CoreStatusMonitor';
 
 export default function SearchBar() {
   const [query, setQuery] = useState('');
@@ -15,6 +16,7 @@ export default function SearchBar() {
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsContainerRef = useRef<HTMLDivElement>(null); // 💡 Klavye navigasyonunda otomatik kaydırma için
+  const lastTrackedSearch = useRef('');
   const router = useRouter();
 
   const PROJECT_ID = 'erntysmhwfxkrtegirds';
@@ -60,6 +62,7 @@ export default function SearchBar() {
       const trimmed = query.trim();
       
       if (trimmed.length < 2) {
+        lastTrackedSearch.current = '';
         setResults([]);
         setIsOpen(false);
         setSelectedIndex(-1);
@@ -138,6 +141,13 @@ export default function SearchBar() {
 
         setResults(unique);
         setIsOpen(unique.length > 0);
+        if (trimmed !== lastTrackedSearch.current) {
+          lastTrackedSearch.current = trimmed;
+          trackCustomEvent('search', {
+            term: trimmed,
+            result_count: unique.length,
+          });
+        }
       } catch (err) {
         console.error('Arama hatası:', err);
         if (active) setResults([]);

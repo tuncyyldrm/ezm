@@ -25,7 +25,7 @@ function hasConsent(): boolean {
   return (
     localStorage.getItem(
       'cookie_consent_accepted'
-    ) !== 'false'
+    ) === 'true'
   );
 }
 
@@ -219,7 +219,7 @@ function sendAnalytics(
 ) {
 
   fetch(
-    '/api/v1/user-preferences/sync',
+    '/api/analytics/events',
     {
       method:'POST',
 

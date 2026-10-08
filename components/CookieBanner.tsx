@@ -24,7 +24,10 @@ export default function CookieBanner() {
     localStorage.setItem('cookie_consent_accepted', 'false');
     setIsOpen(false);
     localStorage.removeItem('_core_uid');
+    localStorage.removeItem('_core_first_visit');
+    localStorage.removeItem('_core_session_count');
     sessionStorage.removeItem('_core_sid');
+    sessionStorage.removeItem('_core_last_activity');
   };
 
   if (!isOpen) return null;
@@ -37,7 +40,7 @@ export default function CookieBanner() {
             <span>🍪</span> Çerez Ayarları
           </h3>
           <p className="mt-0.5 text-[11px] text-gray-600 dark:text-gray-400 leading-normal">
-            Deneyiminizi optimize etmek için yasal çerezler kullanıyoruz. Detaylar:{' '}
+            Kabul ederseniz sayfa görüntüleme ve arama ölçümleri Supabase&apos;e kaydedilir; reddederseniz analiz yapılmaz. Detaylar:{' '}
             <Link href="/cerez-politikasi" className="underline text-gray-900 dark:text-gray-100 font-medium hover:text-gray-700">
               Çerez Politikası
             </Link>

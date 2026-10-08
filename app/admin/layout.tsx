@@ -11,6 +11,7 @@ const menuItems = [
   { href: "/admin/products", label: "Ürünler", icon: "📦" },
   { href: "/admin/categories", label: "Kategoriler", icon: "📁" },
   { href: "/admin/blog", label: "Blog", icon: "📝" },
+  { href: "/admin/analiz", label: "Site Analizi", icon: "📈" },
   { href: "/admin/bildirimler", label: "Bildirimler", icon: "🔔" },
 ];
 
