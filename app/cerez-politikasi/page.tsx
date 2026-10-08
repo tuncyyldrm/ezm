@@ -32,14 +32,14 @@ export default function CookiePolicyPage() {
             2. Hangi Çerezleri Ne Amaçla Kullanıyoruz?
           </h2>
           <p className="mb-3">
-            Web sitemizde yalnızca yasal mevzuata uygun, sınırlı ve belirli amaçlar doğrultusunda çerezler kullanılmaktadır:
+            Sitemiz, analiz tercihinizi tarayıcınızın yerel depolama alanında hatırlar. İzin vermeniz halinde Vercel Web Analytics anonim ve toplulaştırılmış site kullanım istatistikleri üretir. Google Analytics veya Supabase tabanlı ziyaret analizi kullanılmaz.
           </p>
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              <strong>Zorunlu Çerezler:</strong> Web sitesinin temel fonksiyonlarını yerine getirebilmesi, oturum güvenliğinin sağlanması ve çerez tercihinizin hatırlanması için zorunlu olan teknik çerezlerdir.
+              <strong>Tercih kaydı:</strong> “Kabul Et” veya “Reddet” seçiminiz tarayıcınızda saklanır; bu kayıt analiz ölçümü yapmaz.
             </li>
             <li>
-              <strong>Analitik ve Performans Çerezleri:</strong> Sitemizi kaç kişinin ziyaret ettiğini, hangi sayfaların daha çok görüntülendiğini ve kullanıcı hareketlerini anonim (isimsiz) olarak analiz ederek sistem performansını iyileştirmek amacıyla kullanılan birinci taraf istatistik çerezleridir (Google Analytics entegrasyonu dahil).
+              <strong>Analitik ölçüm:</strong> Yalnızca “Kabul Et” seçiminizden sonra yüklenir. “Reddet” seçerseniz analitik yüklenmez. Ölçüm, reklam engelleyiciler veya tarayıcı ayarları tarafından engellenebilir.
             </li>
           </ul>
         </section>
@@ -49,14 +49,11 @@ export default function CookiePolicyPage() {
             3. Çerez Tercihlerinizi Nasıl Yönetebilirsiniz?
           </h2>
           <p className="mb-3">
-            Ziyaretçilerimizin kişisel verileri üzerindeki tercih hakları bizim için esastır. Çerezlere dair tercihlerinizi yönetmek için şu yolları kullanabilirsiniz:
+            Analitik tercihinizi ilk ziyarette çıkan bilgilendirme bandından belirleyebilirsiniz. Tercihi değiştirmek için tarayıcı depolama alanındaki site verilerini silebilirsiniz; sonraki ziyarette seçim bandı yeniden gösterilir.
           </p>
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              Sitemize ilk girişinizde karşınıza çıkan <strong>Çerez Onay Bandı</strong> üzerinden isteklerinizi “Kabul Et” veya “Reddet” şeklinde tek tıkla belirtebilirsiniz.
-            </li>
-            <li>
-              Kullandığınız internet tarayıcısının (Google Chrome, Safari, Microsoft Edge vb.) ayarlar kısmından daha önce kaydedilmiş çerezleri silebilir veya gelecekte çerez kaydedilmesini tamamen engelleyebilirsiniz.
+              Tarayıcı ayarlarınızdan site verilerini silebilir veya ölçümü engelleyebilirsiniz.
             </li>
           </ul>
         </section>

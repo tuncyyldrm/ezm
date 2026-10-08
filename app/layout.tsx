@@ -6,8 +6,8 @@ import "./globals.css";
 import { getBaseUrl } from '@/lib/site';
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollRestorationManager from "@/components/ScrollRestorationManager";
-import CoreStatusMonitor from "@/components/CoreStatusMonitor";
 import CookieBanner from "@/components/CookieBanner";
+import ConsentVercelAnalytics from "@/components/ConsentVercelAnalytics";
 import PushSubscriptionControl from "@/components/PushSubscriptionControl";
 
 const geistSans = Geist({
@@ -162,6 +162,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white overflow-x-hidden"
       >
+        <ConsentVercelAnalytics />
         {/* ACCESSIBILITY */}
         <a
           href="#main-content"
@@ -291,7 +292,6 @@ export default function RootLayout({
         {/* GLOBAL CLIENT COMPONENTS */}
         <ScrollToTop />
         <ScrollRestorationManager />
-        <CoreStatusMonitor />
         <CookieBanner />
       </body>
     </html>

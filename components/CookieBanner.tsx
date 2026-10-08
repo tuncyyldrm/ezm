@@ -16,6 +16,7 @@ export default function CookieBanner() {
 
   const handleAccept = () => {
     localStorage.setItem('cookie_consent_accepted', 'true');
+    window.dispatchEvent(new Event('analytics-consent-changed'));
     setIsOpen(false);
     window.location.reload();
   };
@@ -23,11 +24,7 @@ export default function CookieBanner() {
   const handleDecline = () => {
     localStorage.setItem('cookie_consent_accepted', 'false');
     setIsOpen(false);
-    localStorage.removeItem('_core_uid');
-    localStorage.removeItem('_core_first_visit');
-    localStorage.removeItem('_core_session_count');
-    sessionStorage.removeItem('_core_sid');
-    sessionStorage.removeItem('_core_last_activity');
+    window.dispatchEvent(new Event('analytics-consent-changed'));
   };
 
   if (!isOpen) return null;
@@ -40,7 +37,7 @@ export default function CookieBanner() {
             <span>🍪</span> Çerez Ayarları
           </h3>
           <p className="mt-0.5 text-[11px] text-gray-600 dark:text-gray-400 leading-normal">
-            Kabul ederseniz sayfa görüntüleme ve arama ölçümleri Supabase&apos;e kaydedilir; reddederseniz analiz yapılmaz. Detaylar:{' '}
+            Kabul ederseniz anonim site kullanım istatistikleri Vercel Analytics ile ölçülür; reddederseniz ölçüm yapılmaz. Detaylar:{' '}
             <Link href="/cerez-politikasi" className="underline text-gray-900 dark:text-gray-100 font-medium hover:text-gray-700">
               Çerez Politikası
             </Link>

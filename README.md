@@ -43,9 +43,14 @@ Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlan
 
 ## Site analizini yapılandırma
 
-Site analizi, Google Analytics yerine aynı alan adındaki API üzerinden Supabase'e kayıt alır. Supabase SQL Editor'da [`scripts/site-analytics.sql`](./scripts/site-analytics.sql) içeriğini bir kez çalıştırın. Sunucu ortamında `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` ve gizli `SUPABASE_SERVICE_ROLE_KEY` tanımlı olmalıdır.
+Site trafiği için yalnızca Vercel Web Analytics kullanılır; olaylar Supabase'e yazılmaz ve sitede ayrı analiz tablosu/rapor API'si çalıştırılmaz. Vercel projesinde **Analytics > Enable** seçeneğini açıp yeni deployment yapın. İstatistikleri Vercel proje panelindeki **Analytics** bölümünden görüntüleyin. Çerez bildirimi kabul edilmeden ölçüm yüklenmez. Vercel'in Resilient Intake özelliği veri alımını iyileştirse de reklam engelleyicileri tamamen aşma garantisi vermez.
 
-Çerez bildirimi kabul edildiğinde herkese açık sayfalardaki görüntülemeler, aramalar, rastgele ziyaretçi/oturum kimlikleri, cihaz türü ve yönlendiren alan adı kaydedilir. IP adresi, ham user-agent ve URL sorgu parametreleri saklanmaz; çerez bildirimi reddedilirse analiz gönderilmez ve ölçüm kimlikleri temizlenir. Admin panelindeki **Site Analizi** sayfası 7/30/90 günlük görünüm, popüler sayfalar, aramalar ve cihaz dağılımını gösterir. Birinci taraf ölçüm Google Analytics'e göre reklam engelleyicilerden daha az etkilenebilir; tarayıcı veya ağ düzeyindeki engelleyicilerin ölçümü tamamen engellemesi yine mümkündür. İlk veri toplama SQL kurulumundan sonra başlar; eski ziyaret verileri geriye dönük oluşturulmaz.
+Önceden `scripts/site-analytics.sql` çalıştırıp eski Supabase analiz tablosunu oluşturduysanız, artık kullanılmayacağı için isteğe bağlı olarak Supabase SQL Editor'da şu temizliği uygulayabilirsiniz (bu işlem eski analiz verilerini siler):
+
+```sql
+drop function if exists public.get_site_analytics(timestamptz, timestamptz);
+drop table if exists public.site_analytics_events;
+```
 
 ## Komutlar
 

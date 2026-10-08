@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { compactSearchText, normalizeSearchText } from '@/lib/search';
-import { trackCustomEvent } from '@/components/CoreStatusMonitor';
 
 type ProductCode = {
   code_value?: string | null;
@@ -36,7 +35,6 @@ interface CategoryClientProps {
 export default function CategoryClient({ categoryName, products }: CategoryClientProps) {
   const [inputValue, setInputValue] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const lastTrackedSearch = useRef('');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -134,20 +132,6 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
 
     return scored.map(s => s.product);
   }, [debouncedSearch, indexedProducts, products]);
-
-  useEffect(() => {
-    const term = debouncedSearch.trim();
-    if (term.length < 2) {
-      lastTrackedSearch.current = '';
-      return;
-    }
-    if (term === lastTrackedSearch.current) return;
-    lastTrackedSearch.current = term;
-    trackCustomEvent('search', {
-      term,
-      result_count: filteredProducts.length,
-    });
-  }, [debouncedSearch, filteredProducts.length]);
 
   const isEmpty = filteredProducts.length === 0;
 
