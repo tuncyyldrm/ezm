@@ -25,7 +25,7 @@ async function queryVercelAnalytics(
     until,
     by: by.join(","),
   });
-  if (by.includes("requestPath")) params.set("limit", "10");
+  if (by.length) params.set("limit", "8");
   if (teamId) params.set("teamId", teamId);
 
   const response = await fetch(
@@ -139,7 +139,7 @@ export async function GET(request: Request) {
   }
 
   const daysParam = new URL(request.url).searchParams.get("days");
-  const days = daysParam === "30" || daysParam === "90" ? Number(daysParam) : 7;
+  const days = daysParam === "30" ? 30 : 7;
   const untilDate = new Date();
   const sinceDate = new Date(untilDate);
   sinceDate.setUTCDate(sinceDate.getUTCDate() - days);
@@ -148,9 +148,13 @@ export async function GET(request: Request) {
 
   try {
     const teamId = process.env.VERCEL_TEAM_ID || undefined;
-    const [dailyData, pagesData, totals] = await Promise.all([
+    const [dailyData, pagesData, devicesData, countriesData, referrersData, browsersData, totals] = await Promise.all([
       queryVercelAnalytics(token, projectId, teamId, since, until, ["day"]),
       queryVercelAnalytics(token, projectId, teamId, since, until, ["requestPath"]),
+      queryVercelAnalytics(token, projectId, teamId, since, until, ["deviceType"]),
+      queryVercelAnalytics(token, projectId, teamId, since, until, ["country"]),
+      queryVercelAnalytics(token, projectId, teamId, since, until, ["referrerHostname"]),
+      queryVercelAnalytics(token, projectId, teamId, since, until, ["browserName"]),
       queryVercelTotals(token, projectId, teamId, since, until),
     ]);
 
@@ -164,6 +168,17 @@ export async function GET(request: Request) {
         views: getMetric(row),
       }))
       .sort((a, b) => b.views - a.views);
+
+    const getBreakdown = (data: unknown, dimension: string) =>
+      getRows(data)
+        .map((row) => ({
+          name: typeof row[dimension] === "string" && row[dimension]
+            ? row[dimension] as string
+            : "Bilinmiyor",
+          views: getMetric(row),
+        }))
+        .sort((a, b) => b.views - a.views);
+
     return NextResponse.json(
       {
         days,
@@ -173,6 +188,10 @@ export async function GET(request: Request) {
         },
         daily,
         pages,
+        devices: getBreakdown(devicesData, "deviceType"),
+        countries: getBreakdown(countriesData, "country"),
+        referrers: getBreakdown(referrersData, "referrerHostname"),
+        browsers: getBreakdown(browsersData, "browserName"),
         updatedAt: new Date().toISOString(),
       },
       { headers: { "Cache-Control": "private, no-store" } },

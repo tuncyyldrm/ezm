@@ -7,11 +7,50 @@ type Report = {
   totals: { views: number; visitors: number };
   daily: Array<{ date: string; views: number }>;
   pages: Array<{ path: string; views: number }>;
+  devices: Array<{ name: string; views: number }>;
+  countries: Array<{ name: string; views: number }>;
+  referrers: Array<{ name: string; views: number }>;
+  browsers: Array<{ name: string; views: number }>;
   updatedAt: string;
 };
 
 const numberFormat = new Intl.NumberFormat("tr-TR");
 const dateFormat = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short" });
+
+function BreakdownCard({
+  title,
+  items,
+  emptyText,
+}: {
+  title: string;
+  items: Array<{ name: string; views: number }>;
+  emptyText: string;
+}) {
+  const maxViews = Math.max(...items.map((item) => item.views), 1);
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 className="mb-4 text-sm font-bold text-slate-800">{title}</h2>
+      {items.length ? (
+        <ol className="space-y-4">
+          {items.map((item) => (
+            <li key={item.name}>
+              <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                <span className="min-w-0 truncate text-slate-600">{item.name}</span>
+                <span className="shrink-0 font-semibold text-slate-900">{numberFormat.format(item.views)}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.max(4, (item.views / maxViews) * 100)}%` }} />
+              </div>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="py-6 text-center text-xs text-slate-400">{emptyText}</p>
+      )}
+    </section>
+  );
+}
 
 export default function AnalyticsPage() {
   const [days, setDays] = useState(7);
@@ -48,7 +87,7 @@ export default function AnalyticsPage() {
           <p className="mt-1 text-sm text-slate-500">Vercel Web Analytics verileri</p>
         </div>
         <div className="flex gap-2" aria-label="Rapor dönemi">
-          {[7, 30, 90].map((period) => (
+          {[7, 30].map((period) => (
             <button
               key={period}
               type="button"
@@ -61,6 +100,9 @@ export default function AnalyticsPage() {
           ))}
         </div>
       </header>
+      <p className="text-xs text-slate-500">
+        Vercel Hobby Analytics geçmişi yaklaşık bir ayla sınırlı olduğundan rapor en fazla 30 günü gösterir.
+      </p>
 
       {error && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{error}</p>}
 
@@ -124,6 +166,13 @@ export default function AnalyticsPage() {
           </p>
         )}
       </section>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <BreakdownCard title="Cihazlar" items={report?.devices ?? []} emptyText="Cihaz verisi bulunamadı." />
+        <BreakdownCard title="Ülkeler" items={report?.countries ?? []} emptyText="Ülke verisi bulunamadı." />
+        <BreakdownCard title="Yönlendiren siteler" items={report?.referrers ?? []} emptyText="Harici yönlendirme verisi bulunamadı." />
+        <BreakdownCard title="Tarayıcılar" items={report?.browsers ?? []} emptyText="Tarayıcı verisi bulunamadı." />
+      </div>
     </div>
   );
 }
