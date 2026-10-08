@@ -37,7 +37,7 @@ export default function CookieBanner() {
             <span>🍪</span> Çerez Ayarları
           </h3>
           <p className="mt-0.5 text-[11px] text-gray-600 dark:text-gray-400 leading-normal">
-            Kabul ederseniz anonim site kullanım istatistikleri Vercel Analytics ile ölçülür; reddederseniz ölçüm yapılmaz. Detaylar:{' '}
+            Kabul ederseniz site kullanım istatistikleri Google Analytics 4 ile ölçülür; reddederseniz ölçüm yapılmaz. Detaylar:{' '}
             <Link href="/cerez-politikasi" className="underline text-gray-900 dark:text-gray-100 font-medium hover:text-gray-700">
               Çerez Politikası
             </Link>

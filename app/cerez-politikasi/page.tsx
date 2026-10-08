@@ -32,14 +32,14 @@ export default function CookiePolicyPage() {
             2. Hangi Çerezleri Ne Amaçla Kullanıyoruz?
           </h2>
           <p className="mb-3">
-            Sitemiz, analiz tercihinizi tarayıcınızın yerel depolama alanında hatırlar. İzin vermeniz halinde Vercel Web Analytics anonim ve toplulaştırılmış site kullanım istatistikleri üretir. Google Analytics veya Supabase tabanlı ziyaret analizi kullanılmaz.
+            Sitemiz analiz tercihinizi tarayıcınızın yerel depolama alanında hatırlar. “Kabul Et” seçiminizden sonra Google Analytics 4 (GA4), site kullanımını ve trafik kaynaklarını ölçmek için devreye girer. GA4 verileri Google tarafından işlenir; yönetim raporları yalnızca yetkili yöneticiler tarafından görüntülenebilir.
           </p>
           <ul className="list-disc pl-5 space-y-2">
             <li>
               <strong>Tercih kaydı:</strong> “Kabul Et” veya “Reddet” seçiminiz tarayıcınızda saklanır; bu kayıt analiz ölçümü yapmaz.
             </li>
             <li>
-              <strong>Analitik ölçüm:</strong> Yalnızca “Kabul Et” seçiminizden sonra yüklenir. “Reddet” seçerseniz analitik yüklenmez. Ölçüm, reklam engelleyiciler veya tarayıcı ayarları tarafından engellenebilir.
+              <strong>Analitik ölçüm:</strong> GA4 yalnızca “Kabul Et” seçiminizden sonra yüklenir. “Reddet” seçerseniz GA4 yüklenmez. Ölçüm, reklam engelleyiciler veya tarayıcı ayarları tarafından engellenebilir.
             </li>
           </ul>
         </section>

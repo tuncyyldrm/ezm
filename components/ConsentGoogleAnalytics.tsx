@@ -1,6 +1,6 @@
 "use client";
 
-import { Analytics } from "@vercel/analytics/next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
@@ -24,13 +24,13 @@ function getServerSnapshot() {
   return false;
 }
 
-export default function ConsentVercelAnalytics() {
+export default function ConsentGoogleAnalytics({ gaId }: { gaId: string }) {
   const hasConsent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const pathname = usePathname();
 
-  if (!hasConsent || pathname.startsWith("/admin") || pathname === "/login") {
+  if (!gaId || !hasConsent || pathname.startsWith("/admin") || pathname === "/login") {
     return null;
   }
 
-  return <Analytics />;
+  return <GoogleAnalytics gaId={gaId} />;
 }

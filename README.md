@@ -43,9 +43,17 @@ Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlan
 
 ## Site analizini yapılandırma
 
-Site trafiği için yalnızca Vercel Web Analytics kullanılır; olaylar Supabase'e yazılmaz ve sitede ayrı analiz tablosu yoktur. Vercel projesinde **Analytics > Enable** seçeneğini açın. Admin panelindeki **Site Analizi** raporu Vercel'in resmi Web Analytics API'sinden son 7/30/90 günlük toplam, günlük görüntüleme ve popüler sayfaları okur.
+Site ölçümü Google Analytics 4 (GA4) ile yapılır. Ölçüm kodu yalnızca ziyaretçi çerez bilgilendirmesinde **Kabul Et** seçtikten sonra yüklenir; reddeden ziyaretçiler ölçülmez. Admin panelindeki **Site Analizi** raporu aktif kullanıcı, oturum, sayfa görüntüleme, etkileşim oranı, günlük trafik, popüler sayfalar, cihazlar, ülkeler, trafik kaynakları ve tarayıcıları gösterir.
 
-Vercel'de Web Analytics API erişimi olan bir token oluşturup dağıtım ortamına `VERCEL_ANALYTICS_TOKEN` ve proje ayarlarındaki Project ID'yi `VERCEL_PROJECT_ID` olarak ekleyin. Takım projesiyse `VERCEL_TEAM_ID` de ekleyin. Bu değerler gizli sunucu ortam değişkenleri olarak tutulmalıdır; `NEXT_PUBLIC_` öneki kullanmayın. Vercel'in Resilient Intake özelliği veri alımını iyileştirse de reklam engelleyicileri tamamen aşma garantisi vermez. Çerez bildirimi kabul edilmeden ölçüm yüklenmez.
+Kurulum:
+
+1. Google Analytics'te bir GA4 mülkü ve web veri akışı oluşturun. Web akışındaki Measurement ID'yi (`G-...`) `NEXT_PUBLIC_GA_MEASUREMENT_ID` olarak tanımlayın. Eski `GA_MEASUREMENT_ID` değişkeni de geçiş kolaylığı için desteklenir.
+2. Google Cloud Console'da bir proje oluşturup **Google Analytics Data API**'yi etkinleştirin. Bir servis hesabı ve JSON anahtarı oluşturun.
+3. Servis hesabı e-posta adresini GA4 mülkünün **Mülk erişim yönetimi** bölümüne **Görüntüleyen (Viewer)** rolüyle ekleyin.
+4. GA4 mülk numarasını (Measurement ID değil, sayısal Property ID) `GA_PROPERTY_ID`, servis hesabı e-postasını `GA_SERVICE_ACCOUNT_EMAIL` ve JSON anahtarındaki `private_key` değerini `GA_SERVICE_ACCOUNT_PRIVATE_KEY` olarak dağıtım ortamına ekleyin. Özel anahtar sunucu tarafında kalmalıdır; `NEXT_PUBLIC_` öneki kullanmayın veya anahtarı Git'e eklemeyin. Vercel'e girerken satır sonlarını koruyun ya da `\n` biçiminde girin.
+5. Değişkenleri Vercel'de Production ortamına ekleyip yeniden dağıtım yapın. Rapor verileri GA4'te işlenme süresi nedeniyle gecikmeli görünebilir.
+
+GA4 Data API raporu yalnızca oturum açmış adminlere sunulur ve son 7 veya 30 günü kapsar. Ölçüm reklam engelleyiciler veya tarayıcı ayarları tarafından engellenebilir.
 
 Önceden `scripts/site-analytics.sql` çalıştırıp eski Supabase analiz tablosunu oluşturduysanız, artık kullanılmayacağı için isteğe bağlı olarak Supabase SQL Editor'da şu temizliği uygulayabilirsiniz (bu işlem eski analiz verilerini siler):
 

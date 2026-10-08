@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Report = {
   days: number;
-  totals: { views: number; visitors: number };
+  totals: { views: number; visitors: number; sessions: number; engagementRate: number };
   daily: Array<{ date: string; views: number }>;
   pages: Array<{ path: string; views: number }>;
   devices: Array<{ name: string; views: number }>;
@@ -15,6 +15,7 @@ type Report = {
 };
 
 const numberFormat = new Intl.NumberFormat("tr-TR");
+const percentFormat = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short" });
 
 function BreakdownCard({
@@ -63,7 +64,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/admin/vercel-analytics?days=${days}`, { signal: controller.signal })
+    fetch(`/api/admin/ga-analytics?days=${days}`, { signal: controller.signal })
       .then(async (response) => {
         const body = await response.json();
         if (!response.ok) throw new Error(body.error || "Analiz verisi alınamadı.");
@@ -84,7 +85,7 @@ export default function AnalyticsPage() {
       <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Site Analizi</h1>
-          <p className="mt-1 text-sm text-slate-500">Vercel Web Analytics verileri</p>
+          <p className="mt-1 text-sm text-slate-500">Google Analytics 4 verileri</p>
         </div>
         <div className="flex gap-2" aria-label="Rapor dönemi">
           {[7, 30].map((period) => (
@@ -101,20 +102,29 @@ export default function AnalyticsPage() {
         </div>
       </header>
       <p className="text-xs text-slate-500">
-        Vercel Hobby Analytics geçmişi yaklaşık bir ayla sınırlı olduğundan rapor en fazla 30 günü gösterir.
+        Raporlar GA4’ten alınır; verilerin raporlara yansıması zaman alabilir.
       </p>
 
       {error && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{error}</p>}
 
-      <section className="grid gap-4 sm:grid-cols-2">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: "Sayfa görüntüleme", value: report?.totals.views ?? 0, icon: "👁️" },
-          { label: "Tekil ziyaretçi", value: report?.totals.visitors ?? 0, icon: "👤" },
+          { label: "Aktif kullanıcı", value: report?.totals.visitors ?? 0, icon: "👤" },
+          { label: "Oturum", value: report?.totals.sessions ?? 0, icon: "🧭" },
+          {
+            label: "Etkileşim oranı",
+            value: report?.totals.engagementRate ?? 0,
+            format: percentFormat,
+            icon: "✨",
+          },
         ].map((stat) => (
           <article key={stat.label} className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-xl text-white">{stat.icon}</span>
             <div>
-              <p className="text-2xl font-black text-slate-900">{loading ? "…" : numberFormat.format(stat.value)}</p>
+              <p className="text-2xl font-black text-slate-900">
+                {loading ? "…" : (stat.format ?? numberFormat).format(stat.value)}
+              </p>
               <p className="text-xs text-slate-500">{stat.label}</p>
             </div>
           </article>
@@ -170,7 +180,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <BreakdownCard title="Cihazlar" items={report?.devices ?? []} emptyText="Cihaz verisi bulunamadı." />
         <BreakdownCard title="Ülkeler" items={report?.countries ?? []} emptyText="Ülke verisi bulunamadı." />
-        <BreakdownCard title="Yönlendiren siteler" items={report?.referrers ?? []} emptyText="Harici yönlendirme verisi bulunamadı." />
+        <BreakdownCard title="Trafik kaynakları" items={report?.referrers ?? []} emptyText="Trafik kaynağı verisi bulunamadı." />
         <BreakdownCard title="Tarayıcılar" items={report?.browsers ?? []} emptyText="Tarayıcı verisi bulunamadı." />
       </div>
     </div>

@@ -7,7 +7,7 @@ import { getBaseUrl } from '@/lib/site';
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollRestorationManager from "@/components/ScrollRestorationManager";
 import CookieBanner from "@/components/CookieBanner";
-import ConsentVercelAnalytics from "@/components/ConsentVercelAnalytics";
+import ConsentGoogleAnalytics from "@/components/ConsentGoogleAnalytics";
 import PushSubscriptionControl from "@/components/PushSubscriptionControl";
 
 const geistSans = Geist({
@@ -162,7 +162,9 @@ export default function RootLayout({
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white overflow-x-hidden"
       >
-        <ConsentVercelAnalytics />
+        <ConsentGoogleAnalytics
+          gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? process.env.GA_MEASUREMENT_ID ?? ""}
+        />
         {/* ACCESSIBILITY */}
         <a
           href="#main-content"
