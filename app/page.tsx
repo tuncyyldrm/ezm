@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getBaseUrl, getAbsoluteUrl } from '@/lib/site';
 import SearchBar from '@/components/SearchBar';
 import Link from 'next/link';
 import CategoryImage from '@/components/CategoryImage';
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 const STORAGE = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
-const SITE_URL = 'https://ezmoto.com.tr';
+const SITE_URL = getBaseUrl();
 
 export default async function HomePage() {
   const [{ data: categories, error }, { count: totalProducts }] = await Promise.all([
@@ -45,7 +46,7 @@ export default async function HomePage() {
       description: 'Online oto yedek parça kataloğu',
       potentialAction: {
         '@type': 'SearchAction',
-        target: `${SITE_URL}/search?q={search_term_string}`,
+        target: getAbsoluteUrl('/search?q={search_term_string}'),
         'query-input': 'required name=search_term_string',
       },
     },

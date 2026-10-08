@@ -1,10 +1,11 @@
 import { MetadataRoute } from 'next';
+import { getBaseUrl } from '@/lib/site';
 import { categoryService, supabase } from '@/lib/supabase';
 
 export const revalidate = 300; // 24 saat cache
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://ezmoto.com.tr';
+  const baseUrl = getBaseUrl();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {

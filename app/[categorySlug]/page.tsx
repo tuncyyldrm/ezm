@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getBaseUrl } from '@/lib/site';
 import { notFound } from 'next/navigation';
 import CategoryClient from '@/components/CategoryClient';
 import Link from 'next/link';
@@ -12,7 +13,7 @@ interface CategoryPageProps {
 }
 
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.com.tr';
+const SITE_URL = getBaseUrl();
 
 interface ProductCode {
   code_type: string | null;
@@ -54,8 +55,6 @@ type NormalizedProduct = ProductRecord & {
   product_codes: ProductCode[];
   product_vehicles: ProductVehicle[];
 };
-
-const getBaseUrl = () => SITE_URL;
 
 const normalizeProduct = (p: ProductRecord): NormalizedProduct => ({
   ...p,

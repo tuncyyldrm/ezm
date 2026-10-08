@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getBaseUrl } from '@/lib/site';
 import { notFound } from 'next/navigation';
 import SocketImage from '@/components/SocketImage';
 import ProductImageZoom from '@/components/ProductImageZoom';
@@ -13,7 +14,7 @@ interface ProductPageProps {
 const IMAGE_EXTENSION = 'jpg'; 
 const STORAGE_URL = 'https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images';
 const WHATSAPP = '905546588556';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://ezmoto.com.tr';
+const SITE_URL = getBaseUrl();
 
 type ProductCode = {
   code_type?: string | null;

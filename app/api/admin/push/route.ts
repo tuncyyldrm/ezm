@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { WebPushError } from "web-push";
+import { getBaseUrl } from "@/lib/site";
 import {
   configureWebPush,
   createPushAdminClient,
@@ -95,7 +96,7 @@ export async function GET() {
 }
 
 function resolveTargetUrl(value: string) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr";
+  const siteUrl = getBaseUrl();
   const site = new URL(siteUrl);
 
   try {

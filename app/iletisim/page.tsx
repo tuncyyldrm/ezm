@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import Link from "next/link";
 import InstallAppCard from "@/components/InstallAppCard";
+import { getAbsoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "İletişim | EZM Oto Yedek Parça & Aksesuar",
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
     title: "İletişim | EZM Oto Yedek Parça & Aksesuar",
     description:
       "Bize telefon, WhatsApp, Trendyol veya N11 mağazamızdan ulaşabilirsiniz.",
-    url: "https://ezmoto.com.tr/iletisim",
+    url: getAbsoluteUrl("/iletisim"),
     siteName: "EZM Oto",
     locale: "tr_TR",
     type: "website",
@@ -32,7 +33,7 @@ const contactSchema = {
   "@type": "AutoPartsStore",
   name: "EZM OTO Yedek Parça ve Aksesuar",
   telephone: "+905546588556",
-  url: "https://ezmoto.com.tr/iletisim",
+  url: getAbsoluteUrl("/iletisim"),
   address: {
     "@type": "PostalAddress",
     streetAddress: "Yeni Sanayi Sitesi",

@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import { getBaseUrl } from '@/lib/site';
 import ScrollToTop from "@/components/ScrollToTop";
 import ScrollRestorationManager from "@/components/ScrollRestorationManager";
 import CoreStatusMonitor from "@/components/CoreStatusMonitor";
@@ -47,9 +48,7 @@ export const metadata: Metadata = {
   creator: "EZM OTO",
   publisher: "EZM OTO",
 
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr"
-  ),
+  metadataBase: new URL(getBaseUrl()),
 
   openGraph: {
     type: "website",
@@ -98,17 +97,13 @@ export const metadata: Metadata = {
 const globalStoreSchema = {
   "@context": "https://schema.org",
   "@type": "AutoPartsStore",
-  "@id": `${
-    process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr"
-  }/#organization`,
+  "@id": `${getBaseUrl()}/#organization`,
   name: "EZM OTO",
   description: "Oto yedek parça satış ve online katalog platformu.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr",
+  url: getBaseUrl(),
   telephone: "+905546588556",
   priceRange: "₺",
-  image: `${
-    process.env.NEXT_PUBLIC_SITE_URL || "https://ezmoto.com.tr"
-  }/android-chrome-512x512.png`,
+  image: `${getBaseUrl()}/android-chrome-512x512.png`,
   address: {
     "@type": "PostalAddress",
     streetAddress: "Yedek Parça Sanayi Sitesi",

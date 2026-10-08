@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getAbsoluteUrl } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Hakkımızda | EZM Oto Yedek Parça & Aksesuar',
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     title: 'Hakkımızda | EZM Oto Yedek Parça & Aksesuar',
     description:
       'EZM Oto’nun ürün gruplarını, parça sorgulama yaklaşımını ve müşterilerine sunduğu iletişim kanallarını keşfedin.',
-    url: 'https://ezmoto.com.tr/hakkimizda',
+    url: getAbsoluteUrl('/hakkimizda'),
     siteName: 'EZM Oto',
     locale: 'tr_TR',
     type: 'website',

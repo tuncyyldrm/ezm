@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { getAbsoluteUrl } from "@/lib/site";
 import { supabase } from "@/lib/supabase";
 
 const BUCKET_URL =
@@ -133,7 +134,7 @@ export default async function BlogDetailPage({
 
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `https://ezmoto.com.tr/blog/${post.slug}`,
+      "@id": getAbsoluteUrl(`/blog/${post.slug}`),
     },
 
     ...(imageUrl
