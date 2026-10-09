@@ -43,7 +43,7 @@ Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlan
 
 ## Site analizini yapılandırma
 
-Site ölçümü Google Analytics 4 (GA4) ile yapılır. Ölçüm kodu yalnızca ziyaretçi çerez bilgilendirmesinde **Kabul Et** seçtikten sonra yüklenir; reddeden ziyaretçiler ölçülmez. Admin panelindeki **Site Analizi** raporu aktif kullanıcı, oturum, sayfa görüntüleme, etkileşim oranı, günlük trafik, popüler sayfalar, cihazlar, ülkeler, trafik kaynakları ve tarayıcıları gösterir.
+Site ölçümü Google Analytics 4 (GA4) ile yapılır. Ölçüm kodu yalnızca ziyaretçi çerez bilgilendirmesinde **Kabul Et** seçtikten sonra yüklenir; reddeden ziyaretçiler ölçülmez. Admin panelindeki **Site Analizi** raporu gerçek zamanlı aktif kullanıcıları (30 saniyede bir), günlük görüntüleme/kullanıcı/oturumları, en çok görüntülenen 50 sayfayı, ürün detay sayfası performansını, cihazları, ülkeleri, trafik kaynaklarını, tarayıcıları ve etkinlikleri gösterir.
 
 Kurulum:
 

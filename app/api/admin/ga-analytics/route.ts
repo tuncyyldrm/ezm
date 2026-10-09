@@ -58,6 +58,42 @@ async function runReport(
   return result as AnalyticsReport;
 }
 
+async function runRealtimeReport(
+  accessToken: string,
+  propertyId: string,
+  body: Record<string, unknown>,
+): Promise<AnalyticsReport> {
+  const response = await fetch(
+    `https://analyticsdata.googleapis.com/v1beta/properties/${encodeURIComponent(propertyId)}:runRealtimeReport`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    console.error("[Analytics] GA4 gerçek zamanlı API isteği başarısız:", response.status, detail);
+    throw new Error(
+      response.status === 403
+        ? "GA4 gerçek zamanlı raporuna erişilemiyor. API'yi ve servis hesabı yetkilerini kontrol edin."
+        : "GA4 gerçek zamanlı verileri alınamadı.",
+    );
+  }
+
+  const result: unknown = await response.json();
+  if (!result || typeof result !== "object") {
+    throw new Error("GA4 gerçek zamanlı API beklenmeyen bir yanıt döndürdü.");
+  }
+  return result as AnalyticsReport;
+}
+
 export async function GET(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -110,6 +146,31 @@ export async function GET(request: Request) {
     const accessToken = await googleAuth.getAccessToken();
     if (!accessToken) throw new Error("Google erişim anahtarı alınamadı.");
 
+    if (new URL(request.url).searchParams.get("view") === "live") {
+      const [liveTotals, livePages] = await Promise.all([
+        runRealtimeReport(accessToken, propertyId, {
+          metrics: [{ name: "activeUsers" }],
+        }),
+        runRealtimeReport(accessToken, propertyId, {
+          metrics: [{ name: "activeUsers" }],
+          dimensions: [{ name: "unifiedScreenName" }],
+          orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+          limit: 10,
+        }),
+      ]);
+      return NextResponse.json(
+        {
+          activeUsers: metricValue(liveTotals.rows?.[0], 0),
+          pages: (livePages.rows ?? []).map((row) => ({
+            title: row.dimensionValues?.[0]?.value || "Başlıksız sayfa",
+            users: metricValue(row, 0),
+          })),
+          updatedAt: new Date().toISOString(),
+        },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+
     const dateRanges = [{ startDate: `${days - 1}daysAgo`, endDate: "today" }];
     const previousDateRanges = [{ startDate: `${days * 2 - 1}daysAgo`, endDate: `${days}daysAgo` }];
     const summaryMetrics = [
@@ -119,7 +180,7 @@ export async function GET(request: Request) {
       { name: "engagementRate" },
     ];
     const common = { dateRanges, metrics: [{ name: "screenPageViews" }] };
-    const [dailyReport, summaryReport, previousSummaryReport, pagesReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
+    const [dailyReport, summaryReport, previousSummaryReport, pagesReport, productsReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
       await Promise.all([
         runReport(accessToken, propertyId, {
           dateRanges,
@@ -137,6 +198,34 @@ export async function GET(request: Request) {
           dateRanges: previousDateRanges,
           metrics: summaryMetrics,
           metricAggregations: ["TOTAL"],
+        }),
+        runReport(accessToken, propertyId, {
+          dateRanges,
+          dimensions: [{ name: "pagePath" }],
+          metrics: [
+            { name: "screenPageViews" },
+            { name: "activeUsers" },
+            { name: "sessions" },
+          ],
+          orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+          limit: 50,
+        }),
+        runReport(accessToken, propertyId, {
+          dateRanges,
+          dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
+          metrics: [
+            { name: "screenPageViews" },
+            { name: "activeUsers" },
+            { name: "sessions" },
+          ],
+          dimensionFilter: {
+            filter: {
+              fieldName: "pagePath",
+              stringFilter: { matchType: "BEGINS_WITH", value: "/product/" },
+            },
+          },
+          orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+          limit: 50,
         }),
         ...[
           ["pagePath", "pages"],
@@ -191,11 +280,22 @@ export async function GET(request: Request) {
               ? `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
               : rawDate,
             views: metricValue(row, 0),
+            users: metricValue(row, 1),
+            sessions: metricValue(row, 2),
           };
         }),
         pages: (pagesReport.rows ?? []).map((row) => ({
           path: row.dimensionValues?.[0]?.value || "/",
           views: metricValue(row, 0),
+          users: metricValue(row, 1),
+          sessions: metricValue(row, 2),
+        })),
+        products: (productsReport.rows ?? []).map((row) => ({
+          path: row.dimensionValues?.[0]?.value || "/",
+          title: row.dimensionValues?.[1]?.value || row.dimensionValues?.[0]?.value || "Ürün",
+          views: metricValue(row, 0),
+          users: metricValue(row, 1),
+          sessions: metricValue(row, 2),
         })),
         devices: getBreakdown(devicesReport),
         countries: getBreakdown(countriesReport),

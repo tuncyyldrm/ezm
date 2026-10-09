@@ -13,13 +13,20 @@ type Report = {
   days: number;
   totals: MetricTotals;
   previousTotals: MetricTotals;
-  daily: Array<{ date: string; views: number }>;
-  pages: Array<{ path: string; views: number }>;
+  daily: Array<{ date: string; views: number; users: number; sessions: number }>;
+  pages: Array<{ path: string; views: number; users: number; sessions: number }>;
+  products: Array<{ path: string; title: string; views: number; users: number; sessions: number }>;
   devices: Array<{ name: string; views: number }>;
   countries: Array<{ name: string; views: number }>;
   referrers: Array<{ name: string; views: number }>;
   browsers: Array<{ name: string; views: number }>;
   events: Array<{ name: string; count: number }>;
+  updatedAt: string;
+};
+
+type LiveReport = {
+  activeUsers: number;
+  pages: Array<{ title: string; users: number }>;
   updatedAt: string;
 };
 
@@ -103,6 +110,7 @@ export default function AnalyticsPage() {
   const [days, setDays] = useState(7);
   const [refreshKey, setRefreshKey] = useState(0);
   const [result, setResult] = useState<{ days: number; refreshKey: number; report?: Report; error?: string } | null>(null);
+  const [liveResult, setLiveResult] = useState<{ report?: LiveReport; error?: string } | null>(null);
   const loading = result?.days !== days || result?.refreshKey !== refreshKey;
   const report = result?.days === days && result.refreshKey === refreshKey ? result.report ?? null : null;
   const error = result?.days === days && result.refreshKey === refreshKey ? result.error ?? "" : "";
@@ -132,6 +140,46 @@ export default function AnalyticsPage() {
       });
     return () => controller.abort();
   }, [days, refreshKey]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let requestController: AbortController | null = null;
+
+    const updateLiveReport = async () => {
+      if (document.visibilityState !== "visible") return;
+      requestController?.abort();
+      requestController = new AbortController();
+
+      try {
+        const response = await fetch("/api/admin/ga-analytics?view=live", {
+          signal: requestController.signal,
+        });
+        const body: unknown = await response.json();
+        if (!response.ok) {
+          const message = body && typeof body === "object" && "error" in body && typeof body.error === "string"
+            ? body.error
+            : "Canlı analiz verisi alınamadı.";
+          throw new Error(message);
+        }
+        if (isMounted) setLiveResult({ report: body as LiveReport });
+      } catch (liveError: unknown) {
+        if (liveError instanceof DOMException && liveError.name === "AbortError") return;
+        if (isMounted) {
+          setLiveResult({
+            error: liveError instanceof Error ? liveError.message : "Canlı analiz verisi alınamadı.",
+          });
+        }
+      }
+    };
+
+    void updateLiveReport();
+    const interval = window.setInterval(() => void updateLiveReport(), 30_000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+      requestController?.abort();
+    };
+  }, []);
 
   const stats = report
     ? [
@@ -190,6 +238,48 @@ export default function AnalyticsPage() {
         </div>
       )}
 
+      <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 bg-emerald-50/70 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-3 w-3">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
+            </span>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Şu anda sitede</h2>
+              <p className="text-xs text-slate-500">
+                GA4 canlı raporu · 30 sn’de bir yenilenir
+                {liveResult?.report ? ` · Son kontrol ${new Date(liveResult.report.updatedAt).toLocaleTimeString("tr-TR")}` : ""}
+              </p>
+            </div>
+          </div>
+          {liveResult?.report ? (
+            <div className="text-right">
+              <p className="text-2xl font-black tabular-nums text-emerald-700">{numberFormat.format(liveResult.report.activeUsers)}</p>
+              <p className="text-[11px] text-slate-500">aktif kullanıcı</p>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">{liveResult?.error ? "Canlı veri alınamadı" : "Canlı veri yükleniyor…"}</p>
+          )}
+        </div>
+        {liveResult?.error ? (
+          <p role="status" className="px-5 py-3 text-xs text-amber-700">{liveResult.error}</p>
+        ) : liveResult?.report?.pages.length ? (
+          <ul className="grid gap-x-6 divide-y divide-slate-100 px-5 sm:grid-cols-2 sm:divide-y-0">
+            {liveResult.report.pages.map((page) => (
+              <li key={page.title} className="flex items-center justify-between gap-3 border-b border-slate-100 py-3 text-xs last:border-0 sm:border-b sm:even:border-b-0">
+                <span className="min-w-0 truncate text-slate-600" title={page.title}>{page.title}</span>
+                <span className="shrink-0 font-bold tabular-nums text-slate-900">{numberFormat.format(page.users)} aktif</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="px-5 py-4 text-xs text-slate-400">
+            {liveResult?.report ? "Şu anda aktif sayfa görüntülemesi yok." : "GA4 canlı verisi bekleniyor…"}
+          </p>
+        )}
+      </section>
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Temel ölçümler">
         {stats.map((stat) => (
           <article key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -244,6 +334,73 @@ export default function AnalyticsPage() {
           {!loading && !daily.length && <p className="m-auto text-xs text-slate-400">Bu dönemde henüz veri yok.</p>}
           {loading && <p className="m-auto text-xs text-slate-400">Rapor yükleniyor…</p>}
         </div>
+        {report?.daily.length ? (
+          <div className="mt-5 max-h-64 overflow-auto rounded-xl border border-slate-100">
+            <table className="w-full min-w-[420px] text-left text-xs">
+              <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-2.5 font-semibold">Gün</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Görüntüleme</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Kullanıcı</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">Oturum</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {[...report.daily].reverse().map((item) => (
+                  <tr key={item.date}>
+                    <td className="px-4 py-2.5 font-medium text-slate-700">{dateFormat.format(new Date(`${item.date}T00:00:00Z`))}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-900">{numberFormat.format(item.views)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{numberFormat.format(item.users)}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{numberFormat.format(item.sessions)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5 sm:p-6">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">Ürün performansı</h2>
+            <p className="mt-1 text-xs text-slate-500">Ürün detay sayfalarının görüntüleme, kullanıcı ve oturum verileri</p>
+          </div>
+          <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+            {report ? `${numberFormat.format(report.products.length)} ürün` : "Ürün verileri"}
+          </span>
+        </div>
+        {report?.products.length ? (
+          <div className="max-h-[28rem] overflow-auto">
+            <table className="w-full min-w-[640px] text-left text-xs">
+              <thead className="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Ürün</th>
+                  <th className="px-4 py-3 text-right font-semibold">Görüntüleme</th>
+                  <th className="px-4 py-3 text-right font-semibold">Kullanıcı</th>
+                  <th className="px-5 py-3 text-right font-semibold">Oturum</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {report.products.map((product) => (
+                  <tr key={product.path} className="transition hover:bg-slate-50">
+                    <td className="max-w-[24rem] px-5 py-3">
+                      <p className="truncate font-semibold text-slate-800" title={product.title}>{product.title}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-400" title={product.path}>{product.path}</p>
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold tabular-nums text-slate-900">{numberFormat.format(product.views)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-slate-600">{numberFormat.format(product.users)}</td>
+                    <td className="px-5 py-3 text-right tabular-nums text-slate-600">{numberFormat.format(product.sessions)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="px-5 py-8 text-center text-xs text-slate-400">
+            {loading ? "Ürün verileri yükleniyor…" : "Bu dönemde ürün sayfası görüntülemesi yok."}
+          </p>
+        )}
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -253,15 +410,20 @@ export default function AnalyticsPage() {
               <h2 className="text-sm font-bold text-slate-900">En çok görüntülenen sayfalar</h2>
               <p className="mt-1 text-xs text-slate-500">Sayfa yollarına göre görüntüleme</p>
             </div>
-            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">İlk 10</span>
+            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+              {report ? `İlk ${report.pages.length}` : "İlk 50"}
+            </span>
           </div>
           {report?.pages.length ? (
-            <ol className="divide-y divide-slate-100">
+            <ol className="max-h-[28rem] divide-y divide-slate-100 overflow-auto">
               {report.pages.map((page, index) => (
                 <li key={page.path} className="flex items-center gap-3 py-3 text-sm first:pt-1 last:pb-0">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-700" title={page.path}>{page.path}</span>
-                  <span className="shrink-0 font-bold tabular-nums text-slate-900">{numberFormat.format(page.views)}</span>
+                  <span className="shrink-0 text-right">
+                    <span className="block font-bold tabular-nums text-slate-900">{numberFormat.format(page.views)}</span>
+                    <span className="text-[10px] text-slate-400">{numberFormat.format(page.users)} kullanıcı</span>
+                  </span>
                 </li>
               ))}
             </ol>
