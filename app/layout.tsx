@@ -4,11 +4,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { getBaseUrl } from '@/lib/site';
-import ScrollToTop from "@/components/ScrollToTop";
-import ScrollRestorationManager from "@/components/ScrollRestorationManager";
-import CookieBanner from "@/components/CookieBanner";
 import ConsentGoogleAnalytics from "@/components/ConsentGoogleAnalytics";
 import PushSubscriptionControl from "@/components/PushSubscriptionControl";
+import StorefrontShell from "@/components/StorefrontShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -165,16 +163,9 @@ export default function RootLayout({
         <ConsentGoogleAnalytics
           gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? process.env.GA_MEASUREMENT_ID ?? ""}
         />
-        {/* ACCESSIBILITY */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-blue-600 focus:text-white focus:rounded-lg focus:shadow-lg"
-        >
-          Ana içeriğe geç
-        </a>
-
-        {/* HEADER */}
-        <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-md">
+        <StorefrontShell
+          header={
+            <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-md">
           <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center px-3 sm:px-4 lg:px-6">
             
             {/* HEADER CONTENT */}
@@ -230,71 +221,42 @@ export default function RootLayout({
               </nav>
             </div>
           </div>
-        </header>
-
-        {/* MAIN */}
-        <main
-          id="main-content"
-          className="min-w-0 flex-1 overflow-x-hidden"
+            </header>
+          }
+          footer={
+            <footer className="mt-auto border-t border-gray-200 bg-white" role="contentinfo">
+              <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+                <PushSubscriptionControl />
+                <div className="flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
+                  <p className="text-xs leading-relaxed text-gray-500 sm:text-sm">
+                    &copy; {currentYear} EZM OTO. Tüm hakları saklıdır.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-x-5">
+                    <Link href="/hakkimizda" className="text-xs text-gray-500 transition-colors hover:text-blue-600">
+                      Hakkımızda
+                    </Link>
+                    <Link href="/iletisim" className="text-xs text-gray-500 transition-colors hover:text-blue-600">
+                      İletişim
+                    </Link>
+                    <Link href="/soket" className="text-xs text-gray-400 transition-colors hover:text-blue-600">
+                      Soket
+                    </Link>
+                    <a
+                      href="https://wa.me/905546588556"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-gray-400 transition-colors hover:text-green-600"
+                    >
+                      İletişim Hattı
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </footer>
+          }
         >
           {children}
-        </main>
-
-        {/* FOOTER */}
-        <footer
-          className="mt-auto border-t border-gray-200 bg-white"
-          role="contentinfo"
-        >
-          <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            <PushSubscriptionControl />
-
-            <div className="flex flex-col items-center justify-between gap-5 text-center sm:flex-row sm:text-left">
-              
-              {/* COPYRIGHT */}
-              <p className="text-xs leading-relaxed text-gray-500 sm:text-sm">
-                &copy; {currentYear} EZM OTO. Tüm hakları saklıdır.
-              </p>
-
-              {/* FOOTER LINKS */}
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-x-5">
-                <Link
-                  href="/hakkimizda"
-                  className="text-xs text-gray-500 transition-colors hover:text-blue-600"
-                >
-                  Hakkımızda
-                </Link>
-
-                <Link
-                  href="/iletisim"
-                  className="text-xs text-gray-500 transition-colors hover:text-blue-600"
-                >
-                  İletişim
-                </Link>
-
-                <Link
-                  href="/soket"
-                  className="text-xs text-gray-400 transition-colors hover:text-blue-600"
-                >
-                  Soket
-                </Link>
-
-                <a
-                  href="https://wa.me/905546588556"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-gray-400 transition-colors hover:text-green-600"
-                >
-                  İletişim Hattı
-                </a>
-              </div>
-            </div>
-          </div>
-        </footer>
-
-        {/* GLOBAL CLIENT COMPONENTS */}
-        <ScrollToTop />
-        <ScrollRestorationManager />
-        <CookieBanner />
+        </StorefrontShell>
       </body>
     </html>
   );
