@@ -147,10 +147,11 @@ export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
   const daysParam = searchParams.get("days");
   const isToday = searchParams.get("period") === "today";
+  const isYesterday = searchParams.get("period") === "yesterday";
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
   const isCustomRange = startDateParam !== null || endDateParam !== null;
-  let days = isToday ? 1 : daysParam === "30" ? 30 : 7;
+  let days = isToday || isYesterday ? 1 : daysParam === "30" ? 30 : 7;
   let startDate: string;
   let endDate: string;
   let previousStartDate: string;
@@ -182,6 +183,11 @@ export async function GET(request: Request) {
     endDate = "today";
     previousStartDate = "yesterday";
     previousEndDate = "yesterday";
+  } else if (isYesterday) {
+    startDate = "yesterday";
+    endDate = "yesterday";
+    previousStartDate = "2daysAgo";
+    previousEndDate = "2daysAgo";
   } else {
     startDate = `${days - 1}daysAgo`;
     endDate = "today";
@@ -247,13 +253,13 @@ export async function GET(request: Request) {
       { name: "sessions" },
       { name: "engagementRate" },
     ];
-    const common = { dateRanges, metrics: [{ name: "screenPageViews" }] };
     const hostFilter = {
       filter: {
         fieldName: "hostName",
         stringFilter: { matchType: "EXACT", value: hostname },
       },
     };
+    const common = { dateRanges, dimensionFilter: hostFilter, metrics: [{ name: "screenPageViews" }] };
     const [dailyReport, summaryReport, previousSummaryReport, pagesReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
       await Promise.all([
         runReport(accessToken, propertyId, {

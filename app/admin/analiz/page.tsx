@@ -33,7 +33,7 @@ type LiveReport = {
 };
 
 type DateRangeSelection =
-  | { type: "preset"; value: "today" | "7" | "30" }
+  | { type: "preset"; value: "today" | "yesterday" | "7" | "30" }
   | { type: "custom"; startDate: string; endDate: string };
 
 const numberFormat = new Intl.NumberFormat("tr-TR");
@@ -123,6 +123,14 @@ export default function AnalyticsPage() {
   const [productSearch, setProductSearch] = useState("");
   const [pageSearch, setPageSearch] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const [productSortField, setProductSortField] = useState<"views" | "users" | "sessions">("views");
+  const [productSortOrder, setProductSortOrder] = useState<"asc" | "desc">("desc");
+  const [productLimit, setProductLimit] = useState(10);
+
+  const [pageSortField, setPageSortField] = useState<"views" | "users">("views");
+  const [pageSortOrder, setPageSortOrder] = useState<"asc" | "desc">("desc");
+  const [pageLimit, setPageLimit] = useState(10);
   const rangeKey = dateRange.type === "custom"
     ? `custom:${dateRange.startDate}:${dateRange.endDate}`
     : `preset:${dateRange.value}`;
@@ -130,10 +138,12 @@ export default function AnalyticsPage() {
     ? `startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
     : dateRange.value === "today"
       ? "period=today"
-      : `days=${dateRange.value}`;
+      : dateRange.value === "yesterday"
+        ? "period=yesterday"
+        : `days=${dateRange.value}`;
   const chartDays = dateRange.type === "custom"
     ? Math.floor((Date.parse(`${dateRange.endDate}T00:00:00Z`) - Date.parse(`${dateRange.startDate}T00:00:00Z`)) / 86_400_000) + 1
-    : dateRange.value === "today" ? 1 : Number(dateRange.value);
+    : dateRange.value === "today" || dateRange.value === "yesterday" ? 1 : Number(dateRange.value);
   const customRangeDays = Math.floor((Date.parse(`${draftEndDate}T00:00:00Z`) - Date.parse(`${draftStartDate}T00:00:00Z`)) / 86_400_000) + 1;
   const today = getLocalDateValue();
   const [result, setResult] = useState<{ rangeKey: string; refreshKey: number; report?: Report; error?: string } | null>(null);
@@ -149,10 +159,41 @@ export default function AnalyticsPage() {
     product.title.toLocaleLowerCase("tr-TR").includes(normalizedProductSearch) ||
     product.path.toLocaleLowerCase("tr-TR").includes(normalizedProductSearch),
   );
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const valA = a[productSortField];
+    const valB = b[productSortField];
+    return productSortOrder === "asc" ? valA - valB : valB - valA;
+  });
+  const displayedProducts = sortedProducts.slice(0, productLimit);
+
   const normalizedPageSearch = pageSearch.trim().toLocaleLowerCase("tr-TR");
   const filteredPages = (report?.pages ?? []).filter((page) =>
     !normalizedPageSearch || page.path.toLocaleLowerCase("tr-TR").includes(normalizedPageSearch),
   );
+  const sortedPages = [...filteredPages].sort((a, b) => {
+    const valA = a[pageSortField];
+    const valB = b[pageSortField];
+    return pageSortOrder === "asc" ? valA - valB : valB - valA;
+  });
+  const displayedPages = sortedPages.slice(0, pageLimit);
+
+  const handleProductSort = (field: "views" | "users" | "sessions") => {
+    if (productSortField === field) {
+      setProductSortOrder((order) => (order === "asc" ? "desc" : "asc"));
+    } else {
+      setProductSortField(field);
+      setProductSortOrder("desc");
+    }
+  };
+
+  const handlePageSort = (field: "views" | "users") => {
+    if (pageSortField === field) {
+      setPageSortOrder((order) => (order === "asc" ? "desc" : "asc"));
+    } else {
+      setPageSortField(field);
+      setPageSortOrder("desc");
+    }
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -216,11 +257,19 @@ export default function AnalyticsPage() {
       }
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void updateLiveReport();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     void updateLiveReport();
     const interval = window.setInterval(() => void updateLiveReport(), 30_000);
     return () => {
       isMounted = false;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       requestController?.abort();
     };
   }, []);
@@ -246,6 +295,7 @@ export default function AnalyticsPage() {
           <div className="flex rounded-xl border border-slate-200 bg-white p-1" aria-label="Rapor dönemi">
             {[
               { value: "today" as const, label: "Bugün" },
+              { value: "yesterday" as const, label: "Dün" },
               { value: "7" as const, label: "7 gün" },
               { value: "30" as const, label: "30 gün" },
             ].map((preset) => (
@@ -321,7 +371,11 @@ export default function AnalyticsPage() {
           <strong className="font-semibold text-slate-800">
             {dateRange.type === "custom"
               ? `${dateRange.startDate} – ${dateRange.endDate}`
-              : dateRange.value === "today" ? "Bugün" : `Son ${dateRange.value} gün`}
+              : dateRange.value === "today"
+                ? "Bugün"
+                : dateRange.value === "yesterday"
+                  ? "Dün"
+                  : `Son ${dateRange.value} gün`}
           </strong>
           {" · "}Önceki eşit uzunluktaki dönemle karşılaştırılır.
         </span>
@@ -471,7 +525,10 @@ export default function AnalyticsPage() {
               id="product-analytics-search"
               type="search"
               value={productSearch}
-              onChange={(event) => setProductSearch(event.target.value)}
+              onChange={(event) => {
+                setProductSearch(event.target.value);
+                setProductLimit(10);
+              }}
               placeholder="Ürün adı veya SKU ara"
               className="min-w-48 rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
@@ -486,13 +543,25 @@ export default function AnalyticsPage() {
               <thead className="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Ürün</th>
-                  <th className="px-4 py-3 text-right font-semibold">Görüntüleme</th>
-                  <th className="px-4 py-3 text-right font-semibold">Kullanıcı</th>
-                  <th className="px-5 py-3 text-right font-semibold">Oturum</th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    <button type="button" onClick={() => handleProductSort("views")} className="hover:text-slate-900">
+                      Görüntüleme {productSortField === "views" ? (productSortOrder === "asc" ? "↑" : "↓") : ""}
+                    </button>
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    <button type="button" onClick={() => handleProductSort("users")} className="hover:text-slate-900">
+                      Kullanıcı {productSortField === "users" ? (productSortOrder === "asc" ? "↑" : "↓") : ""}
+                    </button>
+                  </th>
+                  <th className="px-5 py-3 text-right font-semibold">
+                    <button type="button" onClick={() => handleProductSort("sessions")} className="hover:text-slate-900">
+                      Oturum {productSortField === "sessions" ? (productSortOrder === "asc" ? "↑" : "↓") : ""}
+                    </button>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredProducts.map((product) => (
+                {displayedProducts.map((product) => (
                   <tr key={product.path} className="transition hover:bg-slate-50">
                     <td className="max-w-[24rem] px-5 py-3">
                       <p className="truncate font-semibold text-slate-800" title={product.title}>{product.title}</p>
@@ -511,6 +580,17 @@ export default function AnalyticsPage() {
             {loading ? "Ürün verileri yükleniyor…" : normalizedProductSearch ? "Aramayla eşleşen ürün bulunamadı." : "Bu dönemde ürün sayfası görüntülemesi yok."}
           </p>
         )}
+        {displayedProducts.length < sortedProducts.length && (
+          <div className="border-t border-slate-100 px-5 py-3 text-center">
+            <button
+              type="button"
+              onClick={() => setProductLimit((limit) => limit + 10)}
+              className="text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+            >
+              Daha fazla ürün göster ({displayedProducts.length}/{sortedProducts.length})
+            </button>
+          </div>
+        )}
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -521,23 +601,44 @@ export default function AnalyticsPage() {
               <p className="mt-1 text-xs text-slate-500">Sayfa yollarına göre görüntüleme</p>
             </div>
           </div>
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <label className="sr-only" htmlFor="page-analytics-search">Sayfa ara</label>
             <input
               id="page-analytics-search"
               type="search"
               value={pageSearch}
-              onChange={(event) => setPageSearch(event.target.value)}
+              onChange={(event) => {
+                setPageSearch(event.target.value);
+                setPageLimit(10);
+              }}
               placeholder="Sayfa yolu ara"
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="min-w-40 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
             />
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handlePageSort("views")}
+                aria-pressed={pageSortField === "views"}
+                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold ${pageSortField === "views" ? "bg-slate-200 text-slate-800" : "text-slate-500 hover:bg-slate-100"}`}
+              >
+                Görüntüleme {pageSortField === "views" ? (pageSortOrder === "asc" ? "↑" : "↓") : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePageSort("users")}
+                aria-pressed={pageSortField === "users"}
+                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold ${pageSortField === "users" ? "bg-slate-200 text-slate-800" : "text-slate-500 hover:bg-slate-100"}`}
+              >
+                Kullanıcı {pageSortField === "users" ? (pageSortOrder === "asc" ? "↑" : "↓") : ""}
+              </button>
+            </div>
             <span className="shrink-0 text-[11px] font-semibold text-slate-500">
               {report ? `${numberFormat.format(filteredPages.length)} / ${numberFormat.format(report.pages.length)}` : "—"}
             </span>
           </div>
-          {filteredPages.length ? (
+          {displayedPages.length ? (
             <ol className="max-h-[28rem] divide-y divide-slate-100 overflow-auto">
-              {filteredPages.map((page, index) => (
+              {displayedPages.map((page, index) => (
                 <li key={page.path} className="flex items-center gap-3 py-3 text-sm first:pt-1 last:pb-0">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-700" title={page.path}>{page.path}</span>
@@ -550,6 +651,17 @@ export default function AnalyticsPage() {
             </ol>
           ) : (
             <p className="py-8 text-center text-xs text-slate-400">{loading ? "Yükleniyor…" : normalizedPageSearch ? "Aramayla eşleşen sayfa bulunamadı." : "Bu dönemde sayfa verisi yok."}</p>
+          )}
+          {displayedPages.length < sortedPages.length && (
+            <div className="border-t border-slate-100 pt-3 text-center">
+              <button
+                type="button"
+                onClick={() => setPageLimit((limit) => limit + 10)}
+                className="text-xs font-semibold text-indigo-700 hover:text-indigo-900"
+              >
+                Daha fazla sayfa göster ({displayedPages.length}/{sortedPages.length})
+              </button>
+            </div>
           )}
         </section>
 
