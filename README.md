@@ -43,7 +43,7 @@ Admin gönderim aracı site içi adresleri ve Instagram gibi HTTPS dış bağlan
 
 ## Site analizini yapılandırma
 
-Site ölçümü Google Analytics 4 (GA4) ile yapılır. Ölçüm kodu yalnızca ziyaretçi çerez bilgilendirmesinde **Kabul Et** seçtikten sonra yüklenir; reddeden ziyaretçiler ölçülmez. Admin panelindeki **Site Analizi** raporu gerçek zamanlı aktif kullanıcıları (30 saniyede bir), günlük görüntüleme/kullanıcı/oturumları, en çok görüntülenen 50 sayfayı, ürün detay sayfası performansını, cihazları, ülkeleri, trafik kaynaklarını, tarayıcıları ve etkinlikleri gösterir.
+Site ölçümü Google Analytics 4 (GA4) ile yapılır. Ölçüm kodu yalnızca ziyaretçi çerez bilgilendirmesinde **Kabul Et** seçtikten sonra yüklenir; reddeden ziyaretçiler ölçülmez. Admin panelindeki **Site Analizi** raporu gerçek zamanlı aktif kullanıcıları (30 saniyede bir), günlük görüntüleme/kullanıcı/oturumları, GA4 API sınırına kadar sayfa ve ürün detay performansını (arama dahil), cihazları, ülkeleri, trafik kaynaklarını, tarayıcıları ve etkinlikleri gösterir.
 
 Kurulum:
 
@@ -53,7 +53,7 @@ Kurulum:
 4. GA4 mülk numarasını (Measurement ID değil, sayısal Property ID) `GA_PROPERTY_ID`, servis hesabı e-postasını `GA_SERVICE_ACCOUNT_EMAIL` ve JSON anahtarındaki `private_key` değerini `GA_SERVICE_ACCOUNT_PRIVATE_KEY` olarak dağıtım ortamına ekleyin. Özel anahtar sunucu tarafında kalmalıdır; `NEXT_PUBLIC_` öneki kullanmayın veya anahtarı Git'e eklemeyin. Vercel'e girerken satır sonlarını koruyun ya da `\n` biçiminde girin.
 5. Değişkenleri Vercel'de Production ortamına ekleyip yeniden dağıtım yapın. Rapor verileri GA4'te işlenme süresi nedeniyle gecikmeli görünebilir.
 
-GA4 Data API raporu yalnızca oturum açmış adminlere sunulur. Admin raporunda bugün, son 7/30 gün veya en fazla 366 günlük özel tarih aralığı seçilebilir; özel ve günlük raporlar eşit uzunluktaki önceki dönemle karşılaştırılır. Ölçüm reklam engelleyiciler veya tarayıcı ayarları tarafından engellenebilir.
+GA4 Data API raporu yalnızca oturum açmış adminlere sunulur. Admin raporunda bugün, son 7/30 gün veya en fazla 366 günlük özel tarih aralığı seçilebilir; özel ve günlük raporlar eşit uzunluktaki önceki dönemle karşılaştırılır. Rapor verileri ziyaretçinin GA4 ölçümünü kabul etmesine ve Google Analytics'in veriyi işlemesine bağlıdır; reklam engelleyiciler veya tarayıcı ayarları ölçümü engelleyebilir.
 
 Önceden `scripts/site-analytics.sql` çalıştırıp eski Supabase analiz tablosunu oluşturduysanız, artık kullanılmayacağı için isteğe bağlı olarak Supabase SQL Editor'da şu temizliği uygulayabilirsiniz (bu işlem eski analiz verilerini siler):
 

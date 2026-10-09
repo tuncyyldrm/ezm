@@ -39,6 +39,10 @@ type DateRangeSelection =
 const numberFormat = new Intl.NumberFormat("tr-TR");
 const percentFormat = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short" });
+function getLocalDateValue(date = new Date()) {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
+
 const eventLabels: Record<string, string> = {
   page_view: "Sayfa görüntüleme",
   session_start: "Oturum başlangıcı",
@@ -114,8 +118,10 @@ function BreakdownCard({
 
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState<DateRangeSelection>({ type: "preset", value: "7" });
-  const [draftStartDate, setDraftStartDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [draftEndDate, setDraftEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [draftStartDate, setDraftStartDate] = useState(() => getLocalDateValue());
+  const [draftEndDate, setDraftEndDate] = useState(() => getLocalDateValue());
+  const [productSearch, setProductSearch] = useState("");
+  const [pageSearch, setPageSearch] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const rangeKey = dateRange.type === "custom"
     ? `custom:${dateRange.startDate}:${dateRange.endDate}`
@@ -129,7 +135,7 @@ export default function AnalyticsPage() {
     ? Math.floor((Date.parse(`${dateRange.endDate}T00:00:00Z`) - Date.parse(`${dateRange.startDate}T00:00:00Z`)) / 86_400_000) + 1
     : dateRange.value === "today" ? 1 : Number(dateRange.value);
   const customRangeDays = Math.floor((Date.parse(`${draftEndDate}T00:00:00Z`) - Date.parse(`${draftStartDate}T00:00:00Z`)) / 86_400_000) + 1;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLocalDateValue();
   const [result, setResult] = useState<{ rangeKey: string; refreshKey: number; report?: Report; error?: string } | null>(null);
   const [liveResult, setLiveResult] = useState<{ report?: LiveReport; error?: string } | null>(null);
   const loading = result?.rangeKey !== rangeKey || result?.refreshKey !== refreshKey;
@@ -137,6 +143,16 @@ export default function AnalyticsPage() {
   const error = result?.rangeKey === rangeKey && result.refreshKey === refreshKey ? result.error ?? "" : "";
   const daily = report?.daily ?? [];
   const maxViews = Math.max(...daily.map((item) => item.views), 1);
+  const normalizedProductSearch = productSearch.trim().toLocaleLowerCase("tr-TR");
+  const filteredProducts = (report?.products ?? []).filter((product) =>
+    !normalizedProductSearch ||
+    product.title.toLocaleLowerCase("tr-TR").includes(normalizedProductSearch) ||
+    product.path.toLocaleLowerCase("tr-TR").includes(normalizedProductSearch),
+  );
+  const normalizedPageSearch = pageSearch.trim().toLocaleLowerCase("tr-TR");
+  const filteredPages = (report?.pages ?? []).filter((page) =>
+    !normalizedPageSearch || page.path.toLocaleLowerCase("tr-TR").includes(normalizedPageSearch),
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -442,16 +458,27 @@ export default function AnalyticsPage() {
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5 sm:p-6">
+        <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div>
             <h2 className="text-sm font-bold text-slate-900">Ürün performansı</h2>
             <p className="mt-1 text-xs text-slate-500">Ürün detay sayfalarının görüntüleme, kullanıcı ve oturum verileri</p>
           </div>
-          <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
-            {report ? `${numberFormat.format(report.products.length)} ürün` : "Ürün verileri"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="sr-only" htmlFor="product-analytics-search">Ürün ara</label>
+            <input
+              id="product-analytics-search"
+              type="search"
+              value={productSearch}
+              onChange={(event) => setProductSearch(event.target.value)}
+              placeholder="Ürün adı veya SKU ara"
+              className="min-w-48 rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+            <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+              {report ? `${numberFormat.format(filteredProducts.length)} / ${numberFormat.format(report.products.length)} ürün` : "Ürün verileri"}
+            </span>
+          </div>
         </div>
-        {report?.products.length ? (
+        {filteredProducts.length ? (
           <div className="max-h-[28rem] overflow-auto">
             <table className="w-full min-w-[640px] text-left text-xs">
               <thead className="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
@@ -463,7 +490,7 @@ export default function AnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {report.products.map((product) => (
+                {filteredProducts.map((product) => (
                   <tr key={product.path} className="transition hover:bg-slate-50">
                     <td className="max-w-[24rem] px-5 py-3">
                       <p className="truncate font-semibold text-slate-800" title={product.title}>{product.title}</p>
@@ -479,7 +506,7 @@ export default function AnalyticsPage() {
           </div>
         ) : (
           <p className="px-5 py-8 text-center text-xs text-slate-400">
-            {loading ? "Ürün verileri yükleniyor…" : "Bu dönemde ürün sayfası görüntülemesi yok."}
+            {loading ? "Ürün verileri yükleniyor…" : normalizedProductSearch ? "Aramayla eşleşen ürün bulunamadı." : "Bu dönemde ürün sayfası görüntülemesi yok."}
           </p>
         )}
       </section>
@@ -491,13 +518,24 @@ export default function AnalyticsPage() {
               <h2 className="text-sm font-bold text-slate-900">En çok görüntülenen sayfalar</h2>
               <p className="mt-1 text-xs text-slate-500">Sayfa yollarına göre görüntüleme</p>
             </div>
-            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-              {report ? `İlk ${report.pages.length}` : "İlk 50"}
+          </div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <label className="sr-only" htmlFor="page-analytics-search">Sayfa ara</label>
+            <input
+              id="page-analytics-search"
+              type="search"
+              value={pageSearch}
+              onChange={(event) => setPageSearch(event.target.value)}
+              placeholder="Sayfa yolu ara"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+            <span className="shrink-0 text-[11px] font-semibold text-slate-500">
+              {report ? `${numberFormat.format(filteredPages.length)} / ${numberFormat.format(report.pages.length)}` : "—"}
             </span>
           </div>
-          {report?.pages.length ? (
+          {filteredPages.length ? (
             <ol className="max-h-[28rem] divide-y divide-slate-100 overflow-auto">
-              {report.pages.map((page, index) => (
+              {filteredPages.map((page, index) => (
                 <li key={page.path} className="flex items-center gap-3 py-3 text-sm first:pt-1 last:pb-0">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">{index + 1}</span>
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-700" title={page.path}>{page.path}</span>
@@ -509,7 +547,7 @@ export default function AnalyticsPage() {
               ))}
             </ol>
           ) : (
-            <p className="py-8 text-center text-xs text-slate-400">{loading ? "Yükleniyor…" : "Bu dönemde sayfa verisi yok."}</p>
+            <p className="py-8 text-center text-xs text-slate-400">{loading ? "Yükleniyor…" : normalizedPageSearch ? "Aramayla eşleşen sayfa bulunamadı." : "Bu dönemde sayfa verisi yok."}</p>
           )}
         </section>
 

@@ -233,7 +233,7 @@ export async function GET(request: Request) {
       { name: "engagementRate" },
     ];
     const common = { dateRanges, metrics: [{ name: "screenPageViews" }] };
-    const [dailyReport, summaryReport, previousSummaryReport, pagesReport, productsReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
+    const [dailyReport, summaryReport, previousSummaryReport, pagesReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
       await Promise.all([
         runReport(accessToken, propertyId, {
           dateRanges,
@@ -254,34 +254,16 @@ export async function GET(request: Request) {
         }),
         runReport(accessToken, propertyId, {
           dateRanges,
-          dimensions: [{ name: "pagePath" }],
-          metrics: [
-            { name: "screenPageViews" },
-            { name: "activeUsers" },
-            { name: "sessions" },
-          ],
-          orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-          limit: 50,
-        }),
-        runReport(accessToken, propertyId, {
-          dateRanges,
           dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
           metrics: [
             { name: "screenPageViews" },
             { name: "activeUsers" },
             { name: "sessions" },
           ],
-          dimensionFilter: {
-            filter: {
-              fieldName: "pagePath",
-              stringFilter: { matchType: "BEGINS_WITH", value: "/product/" },
-            },
-          },
           orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
-          limit: 50,
+          limit: 250_000,
         }),
         ...[
-          ["pagePath", "pages"],
           ["deviceCategory", "devices"],
           ["country", "countries"],
           ["sessionSource", "sources"],
@@ -345,13 +327,15 @@ export async function GET(request: Request) {
           users: metricValue(row, 1),
           sessions: metricValue(row, 2),
         })),
-        products: (productsReport.rows ?? []).map((row) => ({
-          path: row.dimensionValues?.[0]?.value || "/",
-          title: row.dimensionValues?.[1]?.value || row.dimensionValues?.[0]?.value || "Ürün",
-          views: metricValue(row, 0),
-          users: metricValue(row, 1),
-          sessions: metricValue(row, 2),
-        })),
+        products: (pagesReport.rows ?? [])
+          .filter((row) => (row.dimensionValues?.[0]?.value ?? "").startsWith("/product/"))
+          .map((row) => ({
+            path: row.dimensionValues?.[0]?.value || "/",
+            title: row.dimensionValues?.[1]?.value || row.dimensionValues?.[0]?.value || "Ürün",
+            views: metricValue(row, 0),
+            users: metricValue(row, 1),
+            sessions: metricValue(row, 2),
+          })),
         devices: getBreakdown(devicesReport),
         countries: getBreakdown(countriesReport),
         referrers: getBreakdown(sourcesReport),
