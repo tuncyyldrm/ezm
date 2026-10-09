@@ -200,11 +200,14 @@ export async function GET(request: Request) {
       process.env.GA_HOSTNAME || new URL(getBaseUrl()).hostname
     ).trim().toLowerCase();
     const isLiveView = searchParams.get("view") === "live";
-    if (isLiveView && process.env.GA_REALTIME_ENABLED !== "true") {
+    if (
+      isLiveView &&
+      (process.env.GA_REALTIME_ENABLED !== "true" || process.env.GA_REALTIME_PUBLIC_ONLY !== "true")
+    ) {
       return NextResponse.json(
         {
           error:
-            "Canlı rapor, yalnızca EZM OTO için ayrılmış GA4 mülkü doğrulandıktan sonra açılmalıdır.",
+            "Canlı rapor, yalnızca EZM OTO'ya özel GA4 mülkü ve admin trafiği filtresi doğrulandıktan sonra açılmalıdır.",
         },
         { status: 503 },
       );
@@ -259,12 +262,38 @@ export async function GET(request: Request) {
         stringFilter: { matchType: "EXACT", value: hostname },
       },
     };
-    const common = { dateRanges, dimensionFilter: hostFilter, metrics: [{ name: "screenPageViews" }] };
+    const adminPathFilter = {
+      orGroup: {
+        expressions: [
+          {
+            filter: {
+              fieldName: "pagePath",
+              stringFilter: { matchType: "EXACT", value: "/admin" },
+            },
+          },
+          {
+            filter: {
+              fieldName: "pagePath",
+              stringFilter: { matchType: "BEGINS_WITH", value: "/admin/" },
+            },
+          },
+        ],
+      },
+    };
+    const publicSiteFilter = {
+      andGroup: {
+        expressions: [
+          hostFilter,
+          { notExpression: adminPathFilter },
+        ],
+      },
+    };
+    const common = { dateRanges, dimensionFilter: publicSiteFilter, metrics: [{ name: "screenPageViews" }] };
     const [dailyReport, summaryReport, previousSummaryReport, pagesReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
       await Promise.all([
         runReport(accessToken, propertyId, {
           dateRanges,
-          dimensionFilter: hostFilter,
+          dimensionFilter: publicSiteFilter,
           dimensions: [{ name: "date" }],
           metrics: summaryMetrics,
           orderBys: [{ dimension: { dimensionName: "date" } }],
@@ -272,19 +301,19 @@ export async function GET(request: Request) {
         }),
         runReport(accessToken, propertyId, {
           dateRanges,
-          dimensionFilter: hostFilter,
+          dimensionFilter: publicSiteFilter,
           metrics: summaryMetrics,
           metricAggregations: ["TOTAL"],
         }),
         runReport(accessToken, propertyId, {
           dateRanges: previousDateRanges,
-          dimensionFilter: hostFilter,
+          dimensionFilter: publicSiteFilter,
           metrics: summaryMetrics,
           metricAggregations: ["TOTAL"],
         }),
         runReport(accessToken, propertyId, {
           dateRanges,
-          dimensionFilter: hostFilter,
+          dimensionFilter: publicSiteFilter,
           dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
           metrics: [
             { name: "screenPageViews" },
@@ -309,7 +338,6 @@ export async function GET(request: Request) {
         ),
         runReport(accessToken, propertyId, {
           ...common,
-          dimensionFilter: hostFilter,
           dimensions: [{ name: "eventName" }],
           metrics: [{ name: "eventCount" }],
           orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],

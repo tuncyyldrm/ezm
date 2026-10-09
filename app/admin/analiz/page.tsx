@@ -289,7 +289,7 @@ export default function AnalyticsPage() {
         <div>
           <p className="mb-1 text-xs font-bold uppercase tracking-widest text-indigo-600">GA4 • Site performansı</p>
           <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Site Analizi</h1>
-          <p className="mt-1 text-sm text-slate-500">Trafiği ve ziyaretçi davranışını takip edin.</p>
+          <p className="mt-1 text-sm text-slate-500">EZM OTO ziyaretçi trafiği; yönetim paneli sayfaları hariç.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-xl border border-slate-200 bg-white p-1" aria-label="Rapor dönemi">
