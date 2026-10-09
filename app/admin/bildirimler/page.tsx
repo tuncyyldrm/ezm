@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Campaign = {
   id: string;
@@ -17,7 +17,35 @@ type DashboardData = {
   campaigns: Campaign[];
 };
 
+const notificationTemplates = [
+  {
+    name: "Instagram'da bizi takip et",
+    title: "Bizi Instagram'da Takip Edin 📸",
+    body: "Yeni ürünleri ve duyuruları kaçırmamak için Instagram hesabımızı takip edin.",
+    url: "https://www.instagram.com/ezm_oto/",
+  },
+  {
+    name: "Yeni ürünler",
+    title: "Yeni Ürünlerimiz Geldi",
+    body: "Aradığınız parçalar ve yeni ürünler kataloğumuzda sizi bekliyor.",
+    url: "/",
+  },
+  {
+    name: "Kampanya / indirim",
+    title: "Fırsatları Kaçırmayın",
+    body: "Güncel ürün ve kampanya fırsatlarımızı şimdi keşfedin.",
+    url: "/",
+  },
+  {
+    name: "Genel duyuru",
+    title: "EZM OTO'dan Duyuru",
+    body: "Sizinle paylaşmak istediğimiz yeni bir duyurumuz var.",
+    url: "/",
+  },
+] as const;
+
 export default function AdminNotificationsPage() {
+  const formRef = useRef<HTMLFormElement>(null);
   const [dashboard, setDashboard] = useState<DashboardData>({
     subscriberCount: 0,
     campaigns: [],
@@ -28,6 +56,14 @@ export default function AdminNotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
+
+  const fillForm = (notification: Pick<Campaign, "title" | "body" | "target_url">, messageText: string) => {
+    setTitle(notification.title);
+    setBody(notification.body);
+    setUrl(notification.target_url);
+    setMessage(messageText);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   useEffect(() => {
     let isCurrent = true;
@@ -115,11 +151,39 @@ export default function AdminNotificationsPage() {
         </p>
       </section>
 
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Hızlı şablonlar</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Bir şablon seç; göndermeden önce başlığı, mesajı ve bağlantıyı düzenleyebilirsin.
+          </p>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {notificationTemplates.map((template) => (
+            <button
+              key={template.name}
+              type="button"
+              disabled={sending}
+              onClick={() =>
+                fillForm(
+                  { title: template.title, body: template.body, target_url: template.url },
+                  `"${template.name}" şablonu forma yüklendi. Göndermeden önce içeriği kontrol et.`,
+                )
+              }
+              className="rounded-xl border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-800 disabled:opacity-50"
+            >
+              {template.name}
+            </button>
+          ))}
+        </div>
+      </section>
+
       <form
+        ref={formRef}
         onSubmit={sendNotification}
         className="space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       >
-        <h2 className="text-lg font-bold text-slate-900">Yeni bildirim oluştur</h2>
+        <h2 className="text-lg font-bold text-slate-900">Bildirim içeriği</h2>
 
         <label className="block text-sm font-semibold text-slate-700">
           Başlık
@@ -201,6 +265,19 @@ export default function AdminNotificationsPage() {
                     <p className="mt-1">
                       {campaign.sent_count} başarılı · {campaign.failed_count} başarısız
                     </p>
+                    <button
+                      type="button"
+                      disabled={sending}
+                      onClick={() =>
+                        fillForm(
+                          { title: campaign.title, body: campaign.body, target_url: campaign.target_url },
+                          "Önceki bildirim içeriği forma yüklendi. Yeniden göndermeden önce kontrol et.",
+                        )
+                      }
+                      className="mt-2 rounded-lg border border-indigo-200 px-3 py-1.5 font-semibold text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-50"
+                    >
+                      Tekrar kullan
+                    </button>
                   </div>
                 </div>
               </li>
