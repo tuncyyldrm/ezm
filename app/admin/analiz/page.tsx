@@ -11,6 +11,8 @@ type MetricTotals = {
 
 type Report = {
   days: number;
+  startDate: string;
+  endDate: string;
   totals: MetricTotals;
   previousTotals: MetricTotals;
   daily: Array<{ date: string; views: number; users: number; sessions: number }>;
@@ -29,6 +31,10 @@ type LiveReport = {
   pages: Array<{ title: string; users: number }>;
   updatedAt: string;
 };
+
+type DateRangeSelection =
+  | { type: "preset"; value: "today" | "7" | "30" }
+  | { type: "custom"; startDate: string; endDate: string };
 
 const numberFormat = new Intl.NumberFormat("tr-TR");
 const percentFormat = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1 });
@@ -107,19 +113,34 @@ function BreakdownCard({
 }
 
 export default function AnalyticsPage() {
-  const [days, setDays] = useState(7);
+  const [dateRange, setDateRange] = useState<DateRangeSelection>({ type: "preset", value: "7" });
+  const [draftStartDate, setDraftStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [draftEndDate, setDraftEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [refreshKey, setRefreshKey] = useState(0);
-  const [result, setResult] = useState<{ days: number; refreshKey: number; report?: Report; error?: string } | null>(null);
+  const rangeKey = dateRange.type === "custom"
+    ? `custom:${dateRange.startDate}:${dateRange.endDate}`
+    : `preset:${dateRange.value}`;
+  const query = dateRange.type === "custom"
+    ? `startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`
+    : dateRange.value === "today"
+      ? "period=today"
+      : `days=${dateRange.value}`;
+  const chartDays = dateRange.type === "custom"
+    ? Math.floor((Date.parse(`${dateRange.endDate}T00:00:00Z`) - Date.parse(`${dateRange.startDate}T00:00:00Z`)) / 86_400_000) + 1
+    : dateRange.value === "today" ? 1 : Number(dateRange.value);
+  const customRangeDays = Math.floor((Date.parse(`${draftEndDate}T00:00:00Z`) - Date.parse(`${draftStartDate}T00:00:00Z`)) / 86_400_000) + 1;
+  const today = new Date().toISOString().slice(0, 10);
+  const [result, setResult] = useState<{ rangeKey: string; refreshKey: number; report?: Report; error?: string } | null>(null);
   const [liveResult, setLiveResult] = useState<{ report?: LiveReport; error?: string } | null>(null);
-  const loading = result?.days !== days || result?.refreshKey !== refreshKey;
-  const report = result?.days === days && result.refreshKey === refreshKey ? result.report ?? null : null;
-  const error = result?.days === days && result.refreshKey === refreshKey ? result.error ?? "" : "";
+  const loading = result?.rangeKey !== rangeKey || result?.refreshKey !== refreshKey;
+  const report = result?.rangeKey === rangeKey && result.refreshKey === refreshKey ? result.report ?? null : null;
+  const error = result?.rangeKey === rangeKey && result.refreshKey === refreshKey ? result.error ?? "" : "";
   const daily = report?.daily ?? [];
   const maxViews = Math.max(...daily.map((item) => item.views), 1);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/admin/ga-analytics?days=${days}`, { signal: controller.signal })
+    fetch(`/api/admin/ga-analytics?${query}`, { signal: controller.signal })
       .then(async (response) => {
         const body: unknown = await response.json();
         if (!response.ok) {
@@ -128,18 +149,23 @@ export default function AnalyticsPage() {
             : "Analiz verisi alınamadı.";
           throw new Error(message);
         }
-        setResult({ days, refreshKey, report: body as Report });
+        setResult({ rangeKey, refreshKey, report: body as Report });
       })
       .catch((fetchError: unknown) => {
         if (fetchError instanceof DOMException && fetchError.name === "AbortError") return;
         setResult({
-          days,
+          rangeKey,
           refreshKey,
           error: fetchError instanceof Error ? fetchError.message : "Analiz verisi alınamadı.",
         });
       });
     return () => controller.abort();
-  }, [days, refreshKey]);
+  }, [query, rangeKey, refreshKey]);
+
+  const applyCustomRange = () => {
+    if (!draftStartDate || !draftEndDate || draftStartDate > draftEndDate || customRangeDays > 366) return;
+    setDateRange({ type: "custom", startDate: draftStartDate, endDate: draftEndDate });
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -200,15 +226,19 @@ export default function AnalyticsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-xl border border-slate-200 bg-white p-1" aria-label="Rapor dönemi">
-            {[7, 30].map((period) => (
+            {[
+              { value: "today" as const, label: "Bugün" },
+              { value: "7" as const, label: "7 gün" },
+              { value: "30" as const, label: "30 gün" },
+            ].map((preset) => (
               <button
-                key={period}
+                key={preset.value}
                 type="button"
-                onClick={() => setDays(period)}
-                aria-pressed={days === period}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${days === period ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}
+                onClick={() => setDateRange({ type: "preset", value: preset.value })}
+                aria-pressed={dateRange.type === "preset" && dateRange.value === preset.value}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${dateRange.type === "preset" && dateRange.value === preset.value ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}
               >
-                {period} gün
+                {preset.label}
               </button>
             ))}
           </div>
@@ -224,8 +254,59 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
+      <section className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-xs font-bold text-slate-800">Özel tarih aralığı</h2>
+          <p className="mt-1 text-[11px] text-slate-500">İki tarih arasındaki günlük ve ürün analizini görüntüleyin (en fazla 366 gün).</p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="grid gap-1 text-[10px] font-semibold text-slate-500">
+            Başlangıç
+            <input
+              type="date"
+              value={draftStartDate}
+              max={today}
+              onChange={(event) => setDraftStartDate(event.target.value)}
+              className="rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-medium text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </label>
+          <label className="grid gap-1 text-[10px] font-semibold text-slate-500">
+            Bitiş
+            <input
+              type="date"
+              value={draftEndDate}
+              min={draftStartDate}
+              max={today}
+              onChange={(event) => setDraftEndDate(event.target.value)}
+              className="rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-medium text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={applyCustomRange}
+            disabled={!draftStartDate || !draftEndDate || draftStartDate > draftEndDate || customRangeDays > 366 || loading}
+            className={`rounded-lg px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              dateRange.type === "custom" ? "bg-indigo-600 text-white" : "bg-slate-900 text-white hover:bg-slate-700"
+            }`}
+          >
+            Tarihi uygula
+          </button>
+        </div>
+        {customRangeDays > 366 && (
+          <p className="text-xs text-rose-700" role="alert">Tarih aralığı en fazla 366 gün olabilir.</p>
+        )}
+      </section>
+
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-100/80 px-4 py-3 text-xs text-slate-600">
-        <span>Seçilen dönem, hemen önceki eşit uzunluktaki dönemle karşılaştırılır.</span>
+        <span>
+          Seçilen dönem:{" "}
+          <strong className="font-semibold text-slate-800">
+            {dateRange.type === "custom"
+              ? `${dateRange.startDate} – ${dateRange.endDate}`
+              : dateRange.value === "today" ? "Bugün" : `Son ${dateRange.value} gün`}
+          </strong>
+          {" · "}Önceki eşit uzunluktaki dönemle karşılaştırılır.
+        </span>
         <span>{report?.updatedAt ? `Son güncelleme: ${new Date(report.updatedAt).toLocaleString("tr-TR")}` : "GA4 verileri gecikmeli güncellenebilir."}</span>
       </div>
 
@@ -313,7 +394,7 @@ export default function AnalyticsPage() {
             </span>
           )}
         </div>
-        <div className="flex h-56 items-end gap-1 overflow-x-auto pb-1 sm:gap-2" role="img" aria-label={`${days} günlük sayfa görüntüleme grafiği`}>
+        <div className="flex h-56 items-end gap-1 overflow-x-auto pb-1 sm:gap-2" role="img" aria-label={`${chartDays} günlük sayfa görüntüleme grafiği`}>
           {daily.map((item, index) => (
             <div key={item.date} className="flex h-full min-w-[24px] flex-1 flex-col items-center justify-end gap-2 sm:min-w-0">
               <span className="text-[10px] font-medium text-slate-500">{item.views ? numberFormat.format(item.views) : ""}</span>
@@ -325,7 +406,7 @@ export default function AnalyticsPage() {
                 />
               </div>
               <span className="whitespace-nowrap text-[9px] text-slate-400 sm:text-[10px]">
-                {days === 7 || index % 5 === 0 || index === daily.length - 1
+                {chartDays <= 7 || index % Math.max(1, Math.ceil(daily.length / 7)) === 0 || index === daily.length - 1
                   ? dateFormat.format(new Date(`${item.date}T00:00:00Z`))
                   : ""}
               </span>

@@ -53,7 +53,7 @@ Kurulum:
 4. GA4 mülk numarasını (Measurement ID değil, sayısal Property ID) `GA_PROPERTY_ID`, servis hesabı e-postasını `GA_SERVICE_ACCOUNT_EMAIL` ve JSON anahtarındaki `private_key` değerini `GA_SERVICE_ACCOUNT_PRIVATE_KEY` olarak dağıtım ortamına ekleyin. Özel anahtar sunucu tarafında kalmalıdır; `NEXT_PUBLIC_` öneki kullanmayın veya anahtarı Git'e eklemeyin. Vercel'e girerken satır sonlarını koruyun ya da `\n` biçiminde girin.
 5. Değişkenleri Vercel'de Production ortamına ekleyip yeniden dağıtım yapın. Rapor verileri GA4'te işlenme süresi nedeniyle gecikmeli görünebilir.
 
-GA4 Data API raporu yalnızca oturum açmış adminlere sunulur ve son 7 veya 30 günü kapsar. Ölçüm reklam engelleyiciler veya tarayıcı ayarları tarafından engellenebilir.
+GA4 Data API raporu yalnızca oturum açmış adminlere sunulur. Admin raporunda bugün, son 7/30 gün veya en fazla 366 günlük özel tarih aralığı seçilebilir; özel ve günlük raporlar eşit uzunluktaki önceki dönemle karşılaştırılır. Ölçüm reklam engelleyiciler veya tarayıcı ayarları tarafından engellenebilir.
 
 Önceden `scripts/site-analytics.sql` çalıştırıp eski Supabase analiz tablosunu oluşturduysanız, artık kullanılmayacağı için isteğe bağlı olarak Supabase SQL Editor'da şu temizliği uygulayabilirsiniz (bu işlem eski analiz verilerini siler):
 

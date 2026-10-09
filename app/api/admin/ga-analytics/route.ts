@@ -20,6 +20,17 @@ function metricValue(row: AnalyticsRow | undefined, index: number) {
   return Number.isFinite(value) ? value : 0;
 }
 
+function parseCalendarDate(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const timestamp = Date.parse(`${value}T00:00:00.000Z`);
+  if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString().slice(0, 10) !== value) return null;
+  return timestamp;
+}
+
+function formatCalendarDate(timestamp: number) {
+  return new Date(timestamp).toISOString().slice(0, 10);
+}
+
 async function runReport(
   accessToken: string,
   propertyId: string,
@@ -132,8 +143,50 @@ export async function GET(request: Request) {
     );
   }
 
-  const daysParam = new URL(request.url).searchParams.get("days");
-  const days = daysParam === "30" ? 30 : 7;
+  const searchParams = new URL(request.url).searchParams;
+  const daysParam = searchParams.get("days");
+  const isToday = searchParams.get("period") === "today";
+  const startDateParam = searchParams.get("startDate");
+  const endDateParam = searchParams.get("endDate");
+  const isCustomRange = startDateParam !== null || endDateParam !== null;
+  let days = isToday ? 1 : daysParam === "30" ? 30 : 7;
+  let startDate: string;
+  let endDate: string;
+  let previousStartDate: string;
+  let previousEndDate: string;
+
+  if (isCustomRange) {
+    const startTimestamp = parseCalendarDate(startDateParam);
+    const endTimestamp = parseCalendarDate(endDateParam);
+    if (startTimestamp === null || endTimestamp === null || startTimestamp > endTimestamp) {
+      return NextResponse.json(
+        { error: "Başlangıç ve bitiş tarihlerini geçerli biçimde seçin; başlangıç bitişten sonra olamaz." },
+        { status: 400 },
+      );
+    }
+    const rangeDays = Math.floor((endTimestamp - startTimestamp) / 86_400_000) + 1;
+    if (rangeDays > 366) {
+      return NextResponse.json(
+        { error: "Özel rapor aralığı en fazla 366 gün olabilir." },
+        { status: 400 },
+      );
+    }
+    days = rangeDays;
+    startDate = formatCalendarDate(startTimestamp);
+    endDate = formatCalendarDate(endTimestamp);
+    previousStartDate = formatCalendarDate(startTimestamp - rangeDays * 86_400_000);
+    previousEndDate = formatCalendarDate(startTimestamp - 86_400_000);
+  } else if (isToday) {
+    startDate = "today";
+    endDate = "today";
+    previousStartDate = "yesterday";
+    previousEndDate = "yesterday";
+  } else {
+    startDate = `${days - 1}daysAgo`;
+    endDate = "today";
+    previousStartDate = `${days * 2 - 1}daysAgo`;
+    previousEndDate = `${days}daysAgo`;
+  }
 
   try {
     const googleAuth = new GoogleAuth({
@@ -171,8 +224,8 @@ export async function GET(request: Request) {
       );
     }
 
-    const dateRanges = [{ startDate: `${days - 1}daysAgo`, endDate: "today" }];
-    const previousDateRanges = [{ startDate: `${days * 2 - 1}daysAgo`, endDate: `${days}daysAgo` }];
+    const dateRanges = [{ startDate, endDate }];
+    const previousDateRanges = [{ startDate: previousStartDate, endDate: previousEndDate }];
     const summaryMetrics = [
       { name: "screenPageViews" },
       { name: "activeUsers" },
@@ -187,7 +240,7 @@ export async function GET(request: Request) {
           dimensions: [{ name: "date" }],
           metrics: summaryMetrics,
           orderBys: [{ dimension: { dimensionName: "date" } }],
-          limit: 31,
+          limit: 250_000,
         }),
         runReport(accessToken, propertyId, {
           dateRanges,
@@ -261,6 +314,8 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         days,
+        startDate,
+        endDate,
         totals: {
           views: metricValue(totals, 0),
           visitors: metricValue(totals, 1),
