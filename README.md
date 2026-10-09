@@ -62,7 +62,7 @@ drop function if exists public.get_site_analytics(timestamptz, timestamptz);
 drop table if exists public.site_analytics_events;
 ```
 
-## Komutlar
+## Komutlar 
 
 ```bash
 npm run lint
