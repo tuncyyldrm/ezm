@@ -2,21 +2,64 @@
 
 import { useEffect, useState } from "react";
 
+type MetricTotals = {
+  views: number;
+  visitors: number;
+  sessions: number;
+  engagementRate: number;
+};
+
 type Report = {
   days: number;
-  totals: { views: number; visitors: number; sessions: number; engagementRate: number };
+  totals: MetricTotals;
+  previousTotals: MetricTotals;
   daily: Array<{ date: string; views: number }>;
   pages: Array<{ path: string; views: number }>;
   devices: Array<{ name: string; views: number }>;
   countries: Array<{ name: string; views: number }>;
   referrers: Array<{ name: string; views: number }>;
   browsers: Array<{ name: string; views: number }>;
+  events: Array<{ name: string; count: number }>;
   updatedAt: string;
 };
 
 const numberFormat = new Intl.NumberFormat("tr-TR");
 const percentFormat = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short" });
+const eventLabels: Record<string, string> = {
+  page_view: "Sayfa görüntüleme",
+  session_start: "Oturum başlangıcı",
+  first_visit: "İlk ziyaret",
+  user_engagement: "Kullanıcı etkileşimi",
+  scroll: "Sayfa kaydırma",
+  click: "Bağlantı tıklaması",
+  search: "Site içi arama",
+  form_start: "Form başlangıcı",
+  form_submit: "Form gönderimi",
+  purchase: "Satın alma",
+  add_to_cart: "Sepete ekleme",
+};
+
+function getChange(current: number, previous: number) {
+  if (previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+function ChangeLabel({ current, previous }: { current: number; previous: number }) {
+  const change = getChange(current, previous);
+  if (change === null) {
+    return <span className="text-xs text-slate-400">Önceki dönemde veri yok</span>;
+  }
+
+  const isIncrease = change > 0;
+  const isSame = change === 0;
+  return (
+    <span className={`text-xs font-semibold ${isSame ? "text-slate-500" : isIncrease ? "text-emerald-700" : "text-rose-700"}`}>
+      {isSame ? "—" : isIncrease ? "↑" : "↓"} {percentFormat.format(Math.abs(change) / 100)}
+      <span className="ml-1 font-normal text-slate-400">önceki döneme göre</span>
+    </span>
+  );
+}
 
 function BreakdownCard({
   title,
@@ -41,7 +84,10 @@ function BreakdownCard({
                 <span className="shrink-0 font-semibold text-slate-900">{numberFormat.format(item.views)}</span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.max(4, (item.views / maxViews) * 100)}%` }} />
+                <div
+                  className="h-full rounded-full bg-indigo-500 transition-[width]"
+                  style={{ width: `${item.views ? Math.max(3, (item.views / maxViews) * 100) : 0}%` }}
+                />
               </div>
             </li>
           ))}
@@ -55,10 +101,11 @@ function BreakdownCard({
 
 export default function AnalyticsPage() {
   const [days, setDays] = useState(7);
-  const [result, setResult] = useState<{ days: number; report?: Report; error?: string } | null>(null);
-  const loading = result?.days !== days;
-  const report = result?.days === days ? result.report ?? null : null;
-  const error = result?.days === days ? result.error ?? "" : "";
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [result, setResult] = useState<{ days: number; refreshKey: number; report?: Report; error?: string } | null>(null);
+  const loading = result?.days !== days || result?.refreshKey !== refreshKey;
+  const report = result?.days === days && result.refreshKey === refreshKey ? result.report ?? null : null;
+  const error = result?.days === days && result.refreshKey === refreshKey ? result.error ?? "" : "";
   const daily = report?.daily ?? [];
   const maxViews = Math.max(...daily.map((item) => item.views), 1);
 
@@ -66,121 +113,187 @@ export default function AnalyticsPage() {
     const controller = new AbortController();
     fetch(`/api/admin/ga-analytics?days=${days}`, { signal: controller.signal })
       .then(async (response) => {
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.error || "Analiz verisi alınamadı.");
-        setResult({ days, report: body as Report });
+        const body: unknown = await response.json();
+        if (!response.ok) {
+          const message = body && typeof body === "object" && "error" in body && typeof body.error === "string"
+            ? body.error
+            : "Analiz verisi alınamadı.";
+          throw new Error(message);
+        }
+        setResult({ days, refreshKey, report: body as Report });
       })
       .catch((fetchError: unknown) => {
         if (fetchError instanceof DOMException && fetchError.name === "AbortError") return;
         setResult({
           days,
+          refreshKey,
           error: fetchError instanceof Error ? fetchError.message : "Analiz verisi alınamadı.",
         });
       });
     return () => controller.abort();
-  }, [days]);
+  }, [days, refreshKey]);
+
+  const stats = report
+    ? [
+        { label: "Sayfa görüntüleme", value: report.totals.views, previous: report.previousTotals.views, icon: "◉", color: "bg-indigo-50 text-indigo-700" },
+        { label: "Aktif kullanıcı", value: report.totals.visitors, previous: report.previousTotals.visitors, icon: "♙", color: "bg-sky-50 text-sky-700" },
+        { label: "Oturum", value: report.totals.sessions, previous: report.previousTotals.sessions, icon: "↗", color: "bg-violet-50 text-violet-700" },
+        { label: "Etkileşim oranı", value: report.totals.engagementRate, previous: report.previousTotals.engagementRate, format: percentFormat, icon: "✦", color: "bg-emerald-50 text-emerald-700" },
+      ]
+    : [];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-12">
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
       <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
+          <p className="mb-1 text-xs font-bold uppercase tracking-widest text-indigo-600">GA4 • Site performansı</p>
           <h1 className="text-2xl font-extrabold text-slate-900 sm:text-3xl">Site Analizi</h1>
-          <p className="mt-1 text-sm text-slate-500">Google Analytics 4 verileri</p>
+          <p className="mt-1 text-sm text-slate-500">Trafiği ve ziyaretçi davranışını takip edin.</p>
         </div>
-        <div className="flex gap-2" aria-label="Rapor dönemi">
-          {[7, 30].map((period) => (
-            <button
-              key={period}
-              type="button"
-              onClick={() => setDays(period)}
-              aria-pressed={days === period}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold ${days === period ? "bg-indigo-600 text-white" : "border border-slate-200 bg-white text-slate-600"}`}
-            >
-              {period} gün
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-xl border border-slate-200 bg-white p-1" aria-label="Rapor dönemi">
+            {[7, 30].map((period) => (
+              <button
+                key={period}
+                type="button"
+                onClick={() => setDays(period)}
+                aria-pressed={days === period}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${days === period ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}
+              >
+                {period} gün
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setRefreshKey((key) => key + 1)}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
+          >
+            <span aria-hidden="true" className={loading ? "animate-spin" : ""}>↻</span>
+            {loading ? "Yükleniyor" : "Yenile"}
+          </button>
         </div>
       </header>
-      <p className="text-xs text-slate-500">
-        Raporlar GA4’ten alınır; verilerin raporlara yansıması zaman alabilir.
-      </p>
 
-      {error && <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{error}</p>}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-100/80 px-4 py-3 text-xs text-slate-600">
+        <span>Seçilen dönem, hemen önceki eşit uzunluktaki dönemle karşılaştırılır.</span>
+        <span>{report?.updatedAt ? `Son güncelleme: ${new Date(report.updatedAt).toLocaleString("tr-TR")}` : "GA4 verileri gecikmeli güncellenebilir."}</span>
+      </div>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: "Sayfa görüntüleme", value: report?.totals.views ?? 0, icon: "👁️" },
-          { label: "Aktif kullanıcı", value: report?.totals.visitors ?? 0, icon: "👤" },
-          { label: "Oturum", value: report?.totals.sessions ?? 0, icon: "🧭" },
-          {
-            label: "Etkileşim oranı",
-            value: report?.totals.engagementRate ?? 0,
-            format: percentFormat,
-            icon: "✨",
-          },
-        ].map((stat) => (
-          <article key={stat.label} className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-xl text-white">{stat.icon}</span>
-            <div>
-              <p className="text-2xl font-black text-slate-900">
-                {loading ? "…" : (stat.format ?? numberFormat).format(stat.value)}
-              </p>
-              <p className="text-xs text-slate-500">{stat.label}</p>
+      {error && (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between">
+          <span>{error}</span>
+          <button type="button" onClick={() => setRefreshKey((key) => key + 1)} className="shrink-0 font-semibold underline">
+            Tekrar dene
+          </button>
+        </div>
+      )}
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Temel ölçümler">
+        {stats.map((stat) => (
+          <article key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-medium text-slate-500">{stat.label}</p>
+                <p className="mt-2 text-3xl font-black tracking-tight text-slate-900">
+                  {loading ? <span className="text-slate-300">···</span> : (stat.format ?? numberFormat).format(stat.value)}
+                </p>
+              </div>
+              <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl font-bold ${stat.color}`}>{stat.icon}</span>
+            </div>
+            <div className="mt-4 min-h-5">
+              {loading ? <span className="text-xs text-slate-300">Karşılaştırma yükleniyor…</span> : (
+                <ChangeLabel current={stat.value} previous={stat.previous} />
+              )}
             </div>
           </article>
         ))}
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-5 text-sm font-bold text-slate-800">Günlük sayfa görüntüleme</h2>
-        <div className="flex h-48 items-end gap-1 sm:gap-2">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">Günlük sayfa görüntüleme</h2>
+            <p className="mt-1 text-xs text-slate-500">Seçilen dönemdeki günlük toplamlar</p>
+          </div>
+          {report && (
+            <span className="text-xs font-semibold text-indigo-700">
+              {numberFormat.format(report.totals.views)} görüntüleme
+            </span>
+          )}
+        </div>
+        <div className="flex h-56 items-end gap-1 overflow-x-auto pb-1 sm:gap-2" role="img" aria-label={`${days} günlük sayfa görüntüleme grafiği`}>
           {daily.map((item, index) => (
-            <div key={`${item.date}-${index}`} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
-              <span className="text-[10px] text-slate-500">{item.views ? numberFormat.format(item.views) : ""}</span>
-              <div className="flex h-full w-full items-end">
+            <div key={item.date} className="flex h-full min-w-[24px] flex-1 flex-col items-center justify-end gap-2 sm:min-w-0">
+              <span className="text-[10px] font-medium text-slate-500">{item.views ? numberFormat.format(item.views) : ""}</span>
+              <div className="flex h-full w-full items-end rounded-t-md bg-slate-50">
                 <div
-                  className="w-full rounded-t bg-indigo-500"
-                  style={{ height: `${item.views ? Math.max(4, (item.views / maxViews) * 100) : 0}%` }}
-                  title={`${item.date}: ${numberFormat.format(item.views)}`}
+                  className="w-full rounded-t-md bg-indigo-500 transition-[height] hover:bg-indigo-600"
+                  style={{ height: `${item.views ? Math.max(3, (item.views / maxViews) * 100) : 0}%` }}
+                  title={`${dateFormat.format(new Date(`${item.date}T00:00:00Z`))}: ${numberFormat.format(item.views)} görüntüleme`}
                 />
               </div>
-              <span className="text-[9px] text-slate-400 sm:text-[10px]">
-                {days < 90 || index % 7 === 0 || index === daily.length - 1
+              <span className="whitespace-nowrap text-[9px] text-slate-400 sm:text-[10px]">
+                {days === 7 || index % 5 === 0 || index === daily.length - 1
                   ? dateFormat.format(new Date(`${item.date}T00:00:00Z`))
                   : ""}
               </span>
             </div>
           ))}
-          {!loading && !daily.length && <p className="m-auto text-xs text-slate-400">Henüz veri yok.</p>}
-          {loading && <p className="m-auto text-xs text-slate-400">Yükleniyor…</p>}
+          {!loading && !daily.length && <p className="m-auto text-xs text-slate-400">Bu dönemde henüz veri yok.</p>}
+          {loading && <p className="m-auto text-xs text-slate-400">Rapor yükleniyor…</p>}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-sm font-bold text-slate-800">En çok görüntülenen sayfalar</h2>
-        {report?.pages.length ? (
-          <ol className="space-y-3">
-            {report.pages.map((page) => (
-              <li key={page.path} className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 text-sm last:border-0">
-                <span className="truncate text-slate-600">{page.path}</span>
-                <span className="shrink-0 font-semibold text-slate-900">{numberFormat.format(page.views)}</span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="py-6 text-center text-xs text-slate-400">{loading ? "Yükleniyor…" : "Bu dönemde sayfa verisi yok."}</p>
-        )}
-        {report?.updatedAt && (
-          <p className="mt-3 text-right text-[10px] text-slate-400">
-            Güncellendi: {new Date(report.updatedAt).toLocaleString("tr-TR")}
-          </p>
-        )}
-      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">En çok görüntülenen sayfalar</h2>
+              <p className="mt-1 text-xs text-slate-500">Sayfa yollarına göre görüntüleme</p>
+            </div>
+            <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">İlk 10</span>
+          </div>
+          {report?.pages.length ? (
+            <ol className="divide-y divide-slate-100">
+              {report.pages.map((page, index) => (
+                <li key={page.path} className="flex items-center gap-3 py-3 text-sm first:pt-1 last:pb-0">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-bold text-slate-500">{index + 1}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium text-slate-700" title={page.path}>{page.path}</span>
+                  <span className="shrink-0 font-bold tabular-nums text-slate-900">{numberFormat.format(page.views)}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="py-8 text-center text-xs text-slate-400">{loading ? "Yükleniyor…" : "Bu dönemde sayfa verisi yok."}</p>
+          )}
+        </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-4">
+            <h2 className="text-sm font-bold text-slate-900">Etkinlikler</h2>
+            <p className="mt-1 text-xs text-slate-500">GA4 tarafından toplanan olaylar</p>
+          </div>
+          {report?.events.length ? (
+            <ol className="divide-y divide-slate-100">
+              {report.events.map((event) => (
+                <li key={event.name} className="flex items-center justify-between gap-3 py-3 text-sm first:pt-1 last:pb-0">
+                  <span className="min-w-0 truncate font-medium text-slate-700" title={event.name}>{eventLabels[event.name] ?? event.name}</span>
+                  <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold tabular-nums text-emerald-800">{numberFormat.format(event.count)}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="py-8 text-center text-xs text-slate-400">{loading ? "Yükleniyor…" : "Bu dönemde etkinlik verisi yok."}</p>
+          )}
+        </section>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <BreakdownCard title="Trafik kaynakları" items={report?.referrers ?? []} emptyText="Trafik kaynağı verisi bulunamadı." />
         <BreakdownCard title="Cihazlar" items={report?.devices ?? []} emptyText="Cihaz verisi bulunamadı." />
         <BreakdownCard title="Ülkeler" items={report?.countries ?? []} emptyText="Ülke verisi bulunamadı." />
-        <BreakdownCard title="Trafik kaynakları" items={report?.referrers ?? []} emptyText="Trafik kaynağı verisi bulunamadı." />
         <BreakdownCard title="Tarayıcılar" items={report?.browsers ?? []} emptyText="Tarayıcı verisi bulunamadı." />
       </div>
     </div>

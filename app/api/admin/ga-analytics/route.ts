@@ -111,21 +111,32 @@ export async function GET(request: Request) {
     if (!accessToken) throw new Error("Google erişim anahtarı alınamadı.");
 
     const dateRanges = [{ startDate: `${days - 1}daysAgo`, endDate: "today" }];
+    const previousDateRanges = [{ startDate: `${days * 2 - 1}daysAgo`, endDate: `${days}daysAgo` }];
+    const summaryMetrics = [
+      { name: "screenPageViews" },
+      { name: "activeUsers" },
+      { name: "sessions" },
+      { name: "engagementRate" },
+    ];
     const common = { dateRanges, metrics: [{ name: "screenPageViews" }] };
-    const [dailyReport, pagesReport, devicesReport, countriesReport, sourcesReport, browsersReport] =
+    const [dailyReport, summaryReport, previousSummaryReport, pagesReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
       await Promise.all([
         runReport(accessToken, propertyId, {
           dateRanges,
           dimensions: [{ name: "date" }],
-          metrics: [
-            { name: "screenPageViews" },
-            { name: "activeUsers" },
-            { name: "sessions" },
-            { name: "engagementRate" },
-          ],
-          metricAggregations: ["TOTAL"],
+          metrics: summaryMetrics,
           orderBys: [{ dimension: { dimensionName: "date" } }],
           limit: 31,
+        }),
+        runReport(accessToken, propertyId, {
+          dateRanges,
+          metrics: summaryMetrics,
+          metricAggregations: ["TOTAL"],
+        }),
+        runReport(accessToken, propertyId, {
+          dateRanges: previousDateRanges,
+          metrics: summaryMetrics,
+          metricAggregations: ["TOTAL"],
         }),
         ...[
           ["pagePath", "pages"],
@@ -141,6 +152,13 @@ export async function GET(request: Request) {
             limit: 10,
           }),
         ),
+        runReport(accessToken, propertyId, {
+          dateRanges,
+          dimensions: [{ name: "eventName" }],
+          metrics: [{ name: "eventCount" }],
+          orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],
+          limit: 10,
+        }),
       ]);
 
     const getBreakdown = (report: AnalyticsReport) =>
@@ -148,7 +166,8 @@ export async function GET(request: Request) {
         name: row.dimensionValues?.[0]?.value || "Bilinmiyor",
         views: metricValue(row, 0),
       }));
-    const totals = dailyReport.totals?.[0];
+    const totals = summaryReport.totals?.[0];
+    const previousTotals = previousSummaryReport.totals?.[0];
 
     return NextResponse.json(
       {
@@ -158,6 +177,12 @@ export async function GET(request: Request) {
           visitors: metricValue(totals, 1),
           sessions: metricValue(totals, 2),
           engagementRate: metricValue(totals, 3),
+        },
+        previousTotals: {
+          views: metricValue(previousTotals, 0),
+          visitors: metricValue(previousTotals, 1),
+          sessions: metricValue(previousTotals, 2),
+          engagementRate: metricValue(previousTotals, 3),
         },
         daily: (dailyReport.rows ?? []).map((row) => {
           const rawDate = row.dimensionValues?.[0]?.value ?? "";
@@ -176,6 +201,10 @@ export async function GET(request: Request) {
         countries: getBreakdown(countriesReport),
         referrers: getBreakdown(sourcesReport),
         browsers: getBreakdown(browsersReport),
+        events: (eventsReport.rows ?? []).map((row) => ({
+          name: row.dimensionValues?.[0]?.value || "Bilinmeyen etkinlik",
+          count: metricValue(row, 0),
+        })),
         updatedAt: new Date().toISOString(),
       },
       { headers: { "Cache-Control": "private, no-store" } },
