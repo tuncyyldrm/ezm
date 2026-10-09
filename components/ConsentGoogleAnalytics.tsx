@@ -24,11 +24,20 @@ function getServerSnapshot() {
   return false;
 }
 
-export default function ConsentGoogleAnalytics({ gaId }: { gaId: string }) {
+export default function ConsentGoogleAnalytics({
+  gaId,
+  siteHost,
+}: {
+  gaId: string;
+  siteHost: string;
+}) {
   const hasConsent = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const pathname = usePathname();
+  const isExpectedHost =
+    typeof window !== "undefined" &&
+    window.location.hostname.toLowerCase() === siteHost.toLowerCase();
 
-  if (!gaId || !hasConsent || pathname.startsWith("/admin") || pathname === "/login") {
+  if (!gaId || !hasConsent || !isExpectedHost || pathname.startsWith("/admin") || pathname === "/login") {
     return null;
   }
 

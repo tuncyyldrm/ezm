@@ -161,7 +161,8 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-gray-50 text-gray-900 selection:bg-blue-500 selection:text-white overflow-x-hidden"
       >
         <ConsentGoogleAnalytics
-          gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? process.env.GA_MEASUREMENT_ID ?? ""}
+          gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? ""}
+          siteHost={new URL(getBaseUrl()).hostname}
         />
         <StorefrontShell
           header={

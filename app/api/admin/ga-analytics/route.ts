@@ -2,6 +2,7 @@ import { GoogleAuth } from "google-auth-library";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { getBaseUrl } from "@/lib/site";
 
 export const runtime = "nodejs";
 
@@ -189,6 +190,20 @@ export async function GET(request: Request) {
   }
 
   try {
+    const hostname = (
+      process.env.GA_HOSTNAME || new URL(getBaseUrl()).hostname
+    ).trim().toLowerCase();
+    const isLiveView = searchParams.get("view") === "live";
+    if (isLiveView && process.env.GA_REALTIME_ENABLED !== "true") {
+      return NextResponse.json(
+        {
+          error:
+            "Canlı rapor, yalnızca EZM OTO için ayrılmış GA4 mülkü doğrulandıktan sonra açılmalıdır.",
+        },
+        { status: 503 },
+      );
+    }
+
     const googleAuth = new GoogleAuth({
       credentials: {
         client_email: clientEmail,
@@ -199,7 +214,7 @@ export async function GET(request: Request) {
     const accessToken = await googleAuth.getAccessToken();
     if (!accessToken) throw new Error("Google erişim anahtarı alınamadı.");
 
-    if (new URL(request.url).searchParams.get("view") === "live") {
+    if (isLiveView) {
       const [liveTotals, livePages] = await Promise.all([
         runRealtimeReport(accessToken, propertyId, {
           metrics: [{ name: "activeUsers" }],
@@ -233,10 +248,17 @@ export async function GET(request: Request) {
       { name: "engagementRate" },
     ];
     const common = { dateRanges, metrics: [{ name: "screenPageViews" }] };
+    const hostFilter = {
+      filter: {
+        fieldName: "hostName",
+        stringFilter: { matchType: "EXACT", value: hostname },
+      },
+    };
     const [dailyReport, summaryReport, previousSummaryReport, pagesReport, devicesReport, countriesReport, sourcesReport, browsersReport, eventsReport] =
       await Promise.all([
         runReport(accessToken, propertyId, {
           dateRanges,
+          dimensionFilter: hostFilter,
           dimensions: [{ name: "date" }],
           metrics: summaryMetrics,
           orderBys: [{ dimension: { dimensionName: "date" } }],
@@ -244,16 +266,19 @@ export async function GET(request: Request) {
         }),
         runReport(accessToken, propertyId, {
           dateRanges,
+          dimensionFilter: hostFilter,
           metrics: summaryMetrics,
           metricAggregations: ["TOTAL"],
         }),
         runReport(accessToken, propertyId, {
           dateRanges: previousDateRanges,
+          dimensionFilter: hostFilter,
           metrics: summaryMetrics,
           metricAggregations: ["TOTAL"],
         }),
         runReport(accessToken, propertyId, {
           dateRanges,
+          dimensionFilter: hostFilter,
           dimensions: [{ name: "pagePath" }, { name: "pageTitle" }],
           metrics: [
             { name: "screenPageViews" },
@@ -277,7 +302,8 @@ export async function GET(request: Request) {
           }),
         ),
         runReport(accessToken, propertyId, {
-          dateRanges,
+          ...common,
+          dimensionFilter: hostFilter,
           dimensions: [{ name: "eventName" }],
           metrics: [{ name: "eventCount" }],
           orderBys: [{ metric: { metricName: "eventCount" }, desc: true }],

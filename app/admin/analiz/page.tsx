@@ -185,10 +185,11 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     let isMounted = true;
+    let liveViewDisabled = false;
     let requestController: AbortController | null = null;
 
     const updateLiveReport = async () => {
-      if (document.visibilityState !== "visible") return;
+      if (liveViewDisabled || document.visibilityState !== "visible") return;
       requestController?.abort();
       requestController = new AbortController();
 
@@ -196,6 +197,7 @@ export default function AnalyticsPage() {
         const response = await fetch("/api/admin/ga-analytics?view=live", {
           signal: requestController.signal,
         });
+        if (response.status === 503) liveViewDisabled = true;
         const body: unknown = await response.json();
         if (!response.ok) {
           const message = body && typeof body === "object" && "error" in body && typeof body.error === "string"
