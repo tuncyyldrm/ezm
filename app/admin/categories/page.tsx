@@ -14,6 +14,7 @@ type CategoryRecord = {
   parent_id?: number | null;
   sort_order?: number | string | null;
   is_active?: boolean | null;
+  image_url?: string | null;
 };
 
 export default function CategoriesPage() {
@@ -50,7 +51,8 @@ export default function CategoriesPage() {
     })();
   }, []);
 
-  const getImageUrl = (slug: string) => `${BUCKET_URL}/${slug}.jpg`;
+  const getImageUrl = (category: Pick<CategoryRecord, "slug" | "image_url">) =>
+    category.image_url || `${BUCKET_URL}/${category.slug}.jpg`;
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,13 +85,26 @@ export default function CategoriesPage() {
 
     // Yeni görsel seçildiyse mevcut sistemle aynı şekilde yükle
     if (imageFile) {
-      const ext = imageFile.name.split(".").pop();
+      const ext = imageFile.name.split(".").pop()?.toLowerCase();
 
-      await supabase.storage
+      if (!ext || !["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) {
+        alert("Desteklenen görsel formatları: JPG, JPEG, PNG, WebP ve GIF.");
+        setLoading(false);
+        return;
+      }
+
+      const { error: uploadError } = await supabase.storage
         .from("product-images")
         .upload(`${slug}.${ext}`, imageFile, {
           upsert: true,
         });
+
+      if (uploadError) {
+        console.error("Kategori görseli yükleme hatası:", uploadError);
+        alert(`Kategori görseli yüklenemedi: ${uploadError.message}`);
+        setLoading(false);
+        return;
+      }
     }
 
     // Yeni kategori ekleniyorsa ve sıra numarası girilmemişse
@@ -117,6 +132,9 @@ export default function CategoriesPage() {
       parent_id: parentId || null,
       sort_order: finalSortOrder,
       is_active: isActive,
+      ...(imageFile
+        ? { image_url: `${BUCKET_URL}/${slug}.${imageFile.name.split(".").pop()?.toLowerCase()}` }
+        : {}),
     };
 
     const { error } = editId
@@ -147,7 +165,7 @@ export default function CategoriesPage() {
     setImageFile(null);
 
     // Mevcut görsel sistemi kesinlikle korunuyor
-    setPreviewUrl(getImageUrl(cat.slug));
+    setPreviewUrl(getImageUrl(cat));
 
     window.scrollTo({
       top: 0,
@@ -284,7 +302,7 @@ export default function CategoriesPage() {
                         <div className="w-12 h-12 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
                           {cat.slug ? (
                             <Image
-                              src={getImageUrl(cat.slug)}
+                              src={getImageUrl(cat)}
                               alt={cat.name}
                               width={48}
                               height={48}
@@ -482,7 +500,7 @@ export default function CategoriesPage() {
                   <input
                     id="fileInput"
                     type="file"
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
                     onChange={handleFile}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />

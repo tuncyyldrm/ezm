@@ -31,6 +31,7 @@ export default async function HomePage() {
     id: string | number;
     slug: string;
     name: string;
+    image_url?: string | null;
   };
 
   const cats = (categories || []) as CategoryCard[];
@@ -130,7 +131,7 @@ export default async function HomePage() {
                 >
                   {/* 🛠️ ÇÖZÜM: Kapsayıcı kutuyu CategoryImage'in 300x300'lük yapısına göre esnettik, sıkışmayı engelledik */}
                   <div className="relative w-full aspect-square max-w-[120px] mx-auto mb-2 flex items-center justify-center bg-white-50 rounded-xl overflow-hidden group-hover:scale-105 transition-transform duration-300">
-                    <CategoryImage slug={cat.slug} name={cat.name} storageUrl={STORAGE} />
+                    <CategoryImage slug={cat.slug} name={cat.name} storageUrl={STORAGE} imageUrl={cat.image_url} />
                   </div>
                   <span className="text-xs font-black text-gray-800 uppercase group-hover:text-blue-600 transition-colors line-clamp-2 mt-auto pt-2">
                     {cat.name}

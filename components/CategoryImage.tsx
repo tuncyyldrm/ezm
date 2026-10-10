@@ -14,26 +14,28 @@ const STATIC_VERSION = 'v1.0.2';
 export default function CategoryImage({ 
   slug, 
   name, 
-  storageUrl 
+  storageUrl,
+  imageUrl
 }: { 
   slug: string; 
   name: string; 
-  storageUrl: string 
+  storageUrl: string;
+  imageUrl?: string | null;
 }) {
   const [formatIndex, setFormatIndex] = useState(0);
-  const [src, setSrc] = useState(`${storageUrl}/${slug}.${FORMATS[0]}?ver=${STATIC_VERSION}`);
+  const [src, setSrc] = useState(imageUrl || `${storageUrl}/${slug}.${FORMATS[0]}?ver=${STATIC_VERSION}`);
 
   useEffect(() => {
     startTransition(() => {
       setFormatIndex(0);
-      setSrc(`${storageUrl}/${slug}.${FORMATS[0]}?ver=${STATIC_VERSION}`);
+      setSrc(imageUrl || `${storageUrl}/${slug}.${FORMATS[0]}?ver=${STATIC_VERSION}`);
     });
-  }, [slug, storageUrl]);
+  }, [slug, storageUrl, imageUrl]);
 
   const handleError = () => {
     if (src === FALLBACK_IMAGE) return;
 
-    const nextIndex = formatIndex + 1;
+    const nextIndex = imageUrl ? FORMATS.length : formatIndex + 1;
     
     if (nextIndex < FORMATS.length) {
       setFormatIndex(nextIndex);
