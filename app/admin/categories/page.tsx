@@ -85,23 +85,15 @@ export default function CategoriesPage() {
 
     // Yeni görsel seçildiyse mevcut sistemle aynı şekilde yükle
     if (imageFile) {
-      const ext = imageFile.name.split(".").pop()?.toLowerCase();
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(`${slug}.jpg`, imageFile, { upsert: true });
 
-      if (!ext || !["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) {
-        alert("Desteklenen görsel formatları: JPG, JPEG, PNG, WebP ve GIF.");
-        setLoading(false);
-        return;
-      }
-
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(`${slug}.${ext}`, imageFile, {
-          upsert: true,
-        });
-
-      if (uploadError) {
-        console.error("Kategori görseli yükleme hatası:", uploadError);
-        alert(`Kategori görseli yüklenemedi: ${uploadError.message}`);
+        if (uploadError) throw uploadError;
+      } catch (error) {
+        console.error("Kategori görseli yükleme hatası:", error);
+        alert(error instanceof Error ? `Kategori görseli yüklenemedi: ${error.message}` : "Kategori görseli yüklenemedi.");
         setLoading(false);
         return;
       }
@@ -132,9 +124,7 @@ export default function CategoriesPage() {
       parent_id: parentId || null,
       sort_order: finalSortOrder,
       is_active: isActive,
-      ...(imageFile
-        ? { image_url: `${BUCKET_URL}/${slug}.${imageFile.name.split(".").pop()?.toLowerCase()}` }
-        : {}),
+      ...(imageFile ? { image_url: `${BUCKET_URL}/${slug}.jpg` } : {}),
     };
 
     const { error } = editId
@@ -500,7 +490,7 @@ export default function CategoriesPage() {
                   <input
                     id="fileInput"
                     type="file"
-                    accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
+                    accept="image/*"
                     onChange={handleFile}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
