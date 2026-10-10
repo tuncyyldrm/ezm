@@ -20,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // 1. Kategorileri Çek
     const categories = await categoryService.getAll();
     const categoryRoutes: MetadataRoute.Sitemap = (categories || [])
-      .filter((category) => category.slug)
+      .filter((category) => category.slug && category.is_active !== false)
       .map((category) => ({
         url: `${baseUrl}/${category.slug}`,
         lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),

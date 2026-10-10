@@ -13,6 +13,7 @@ type CategoryRecord = {
   slug: string;
   parent_id?: number | null;
   sort_order?: number | string | null;
+  is_active?: boolean | null;
 };
 
 export default function CategoriesPage() {
@@ -20,8 +21,10 @@ export default function CategoriesPage() {
   const [name, setName] = useState("");
   const [parentId, setParentId] = useState<number | "">("");
   const [sortOrder, setSortOrder] = useState(0);
+  const [isActive, setIsActive] = useState(true);
   const [editId, setEditId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -113,6 +116,7 @@ export default function CategoriesPage() {
       slug,
       parent_id: parentId || null,
       sort_order: finalSortOrder,
+      is_active: isActive,
     };
 
     const { error } = editId
@@ -139,6 +143,7 @@ export default function CategoriesPage() {
     setName(cat.name);
     setParentId(cat.parent_id || "");
     setSortOrder(Number(cat.sort_order) || 0);
+    setIsActive(cat.is_active ?? true);
     setImageFile(null);
 
     // Mevcut görsel sistemi kesinlikle korunuyor
@@ -155,6 +160,7 @@ export default function CategoriesPage() {
     setName("");
     setParentId("");
     setSortOrder(0);
+    setIsActive(true);
     setImageFile(null);
     setPreviewUrl("");
 
@@ -186,9 +192,13 @@ export default function CategoriesPage() {
     load();
   };
 
-  const filtered = categories.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = categories.filter((c) => {
+    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus =
+      statusFilter === "" ||
+      (statusFilter === "active" ? c.is_active !== false : c.is_active === false);
+    return matchesSearch && matchesStatus;
+  });
 
   const mainCategories = categories.filter(
     (c) => !c.parent_id
@@ -231,18 +241,24 @@ export default function CategoriesPage() {
 
         {/* SOL TARAF: ARAMA VE LİSTE */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="relative">
-            <span className="absolute left-4 top-3.5 text-slate-400 text-sm">
-              🔍
-            </span>
-
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               placeholder="Kategori ağacında ara..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={`${inputStyle} pl-10 py-3.5`}
+              className={inputStyle}
             />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className={`${inputStyle} sm:max-w-48`}
+              aria-label="Kategori durumuna göre filtrele"
+            >
+              <option value="">📊 Tüm Durumlar</option>
+              <option value="active">🟢 Aktif</option>
+              <option value="passive">🔴 Pasif</option>
+            </select>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -301,6 +317,9 @@ export default function CategoriesPage() {
                           <div className="text-xs font-mono text-slate-400 mt-0.5">
                             /{cat.slug}
                           </div>
+                          <span className={`mt-1 inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full ${cat.is_active === false ? "bg-slate-100 text-slate-500" : "bg-emerald-50 text-emerald-700"}`}>
+                            {cat.is_active === false ? "🔴 Pasif" : "🟢 Aktif"}
+                          </span>
                         </div>
                       </div>
 
@@ -388,6 +407,16 @@ export default function CategoriesPage() {
                   bırakırsanız otomatik olarak son sıraya eklenir.
                 </p>
               </div>
+
+              <label className="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+                <span className="text-sm font-bold text-slate-600">Aktif Kategori</span>
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="w-5 h-5 rounded-md text-indigo-600 focus:ring-indigo-500"
+                />
+              </label>
 
               {/* Üst Hiyerarşi */}
               <div>

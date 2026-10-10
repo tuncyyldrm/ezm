@@ -16,7 +16,7 @@ type Bucket = 'product-images';
 
 export interface Category {
   id: number; name: string; slug: string; parent_id?: number | null;
-  image_url?: string | null; created_at?: string; updated_at?: string;
+  image_url?: string | null; is_active?: boolean; created_at?: string; updated_at?: string;
 }
 
 export interface Brand {

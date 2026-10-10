@@ -22,7 +22,7 @@ const SITE_URL = getBaseUrl();
 
 export default async function HomePage() {
   const [{ data: categories, error }, { count: totalProducts }] = await Promise.all([
-    supabase.from('categories').select('*')  .is('parent_id', null)  .order('sort_order', { ascending: true }),
+    supabase.from('categories').select('*').eq('is_active', true).is('parent_id', null).order('sort_order', { ascending: true }),
     supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
   ]);
 

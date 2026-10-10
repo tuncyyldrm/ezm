@@ -76,7 +76,7 @@ async function MissingImageStat() {
 export default async function AdminDashboard() {
   const [products, categories, codes, uncategorized] = await Promise.all([
     supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true),
-    supabase.from("categories").select("*", { count: "exact", head: true }),
+    supabase.from("categories").select("*", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("product_codes").select("*", { count: "exact", head: true }),
     supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true).is("category_id", null),
   ]);

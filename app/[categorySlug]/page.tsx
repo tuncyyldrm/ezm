@@ -74,6 +74,7 @@ export async function generateStaticParams() {
   const { data: categories } = await supabase
     .from('categories')
     .select('slug')
+    .eq('is_active', true)
     .limit(50); // İlk 50 kategoriyi önceden üret
 
   return (categories || []).map((c) => ({
@@ -89,6 +90,7 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     .from('categories')
     .select('name')
     .eq('slug', slug)
+    .eq('is_active', true)
     .maybeSingle();
 
   if (!category) return { title: 'Kategori Bulunamadı' };
@@ -121,6 +123,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     .from('categories')
     .select('id, name, parent_id')
     .eq('slug', slug)
+    .eq('is_active', true)
     .maybeSingle();
 
   if (categoryError || !category) {
@@ -129,7 +132,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   }
 
   const [subRes, prodRes, parentRes] = await Promise.all([
-    supabase.from('categories').select('id, name, slug').eq('parent_id', category.id).order('name'),
+    supabase.from('categories').select('id, name, slug').eq('parent_id', category.id).eq('is_active', true).order('name'),
     
     supabase.from('products')
       .select('id, sku, title, image_url, pin_count, is_new, category_id, product_codes(code_value, code_type), product_vehicles(brands(name))')
@@ -140,7 +143,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       .order('title', { ascending: true }),
 
     category.parent_id 
-      ? supabase.from('categories').select('id, name, slug').eq('id', category.parent_id).maybeSingle()
+      ? supabase.from('categories').select('id, name, slug').eq('id', category.parent_id).eq('is_active', true).maybeSingle()
       : Promise.resolve({ data: null })
   ]);
 
