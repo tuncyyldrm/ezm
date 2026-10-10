@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import { Suspense } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -38,18 +39,46 @@ async function countActiveProductsWithoutStorageImage() {
   return [...activeSkus].filter((sku) => !storedImageNames.has(`${sku}.jpg`)).length;
 }
 
+async function MissingImageStat() {
+  let count: number | null = null;
+  let errorMessage: string | null = null;
+
+  try {
+    count = await countActiveProductsWithoutStorageImage();
+  } catch (error) {
+    console.error("Supabase Storage ürün görselleri kontrol edilemedi:", error);
+    errorMessage = "Storage dosya listeleme iznini kontrol edin.";
+  }
+
+  const label = errorMessage
+    ? "Görsel Kontrolü Yapılamadı"
+    : "Stok Koduna Göre Görseli Eksik Aktif Ürün";
+  const color = errorMessage
+    ? "text-amber-600 bg-amber-50"
+    : count
+      ? "text-blue-600 bg-blue-50"
+      : "text-slate-400 bg-slate-50";
+
+  return (
+    <div className={`p-4 rounded-2xl border border-slate-100 ${color}`}>
+      <div className="text-2xl mb-2">🖼️</div>
+      <div className="text-2xl font-black text-slate-900">
+        {count?.toLocaleString("tr-TR") ?? "—"}
+      </div>
+      <p className="text-xs font-bold uppercase tracking-wider mt-1">{label}</p>
+      {errorMessage && (
+        <p role="status" className="mt-2 text-xs font-medium">{errorMessage}</p>
+      )}
+    </div>
+  );
+}
+
 export default async function AdminDashboard() {
-  const [products, categories, codes, uncategorized, noImageCheck] = await Promise.all([
+  const [products, categories, codes, uncategorized] = await Promise.all([
     supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true),
     supabase.from("categories").select("*", { count: "exact", head: true }),
     supabase.from("product_codes").select("*", { count: "exact", head: true }),
     supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true).is("category_id", null),
-    countActiveProductsWithoutStorageImage()
-      .then((count) => ({ count, error: null }))
-      .catch((error: unknown) => {
-        console.error("Supabase Storage ürün görselleri kontrol edilemedi:", error);
-        return { count: null, error: "Storage dosya listeleme iznini kontrol edin." };
-      }),
   ]);
 
   const failedQuery = [products, categories, codes, uncategorized].find(result => result.error);
@@ -65,13 +94,6 @@ export default async function AdminDashboard() {
 
   const alertStats = [
     { label: "Kategorisiz Aktif Ürün", value: uncategorized.count || 0, color: uncategorized.count ? "text-amber-600 bg-amber-50" : "text-slate-400 bg-slate-50", icon: "📁" },
-    {
-      label: noImageCheck.error ? "Görsel Kontrolü Yapılamadı" : "Stok Koduna Göre Görseli Eksik Aktif Ürün",
-      value: noImageCheck.count ?? "—",
-      color: noImageCheck.error ? "text-amber-600 bg-amber-50" : noImageCheck.count ? "text-blue-600 bg-blue-50" : "text-slate-400 bg-slate-50",
-      icon: "🖼️",
-      description: noImageCheck.error,
-    },
   ];
 
   return (
@@ -118,11 +140,24 @@ export default async function AdminDashboard() {
               <div className="text-2xl mb-2">{stat.icon}</div>
               <div className="text-2xl font-black text-slate-900">{typeof stat.value === "number" ? stat.value.toLocaleString("tr-TR") : stat.value}</div>
               <p className="text-xs font-bold uppercase tracking-wider mt-1">{stat.label}</p>
-              {"description" in stat && stat.description && (
-                <p role="status" className="mt-2 text-xs font-medium">{stat.description}</p>
-              )}
             </div>
           ))}
+          <Suspense
+            fallback={
+              <div
+                role="status"
+                className="p-4 rounded-2xl border border-slate-100 text-slate-400 bg-slate-50"
+              >
+                <div className="text-2xl mb-2">🖼️</div>
+                <div className="text-2xl font-black text-slate-900">—</div>
+                <p className="text-xs font-bold uppercase tracking-wider mt-1">
+                  Görsel kontrolü yapılıyor
+                </p>
+              </div>
+            }
+          >
+            <MissingImageStat />
+          </Suspense>
         </div>
       </div>
 
