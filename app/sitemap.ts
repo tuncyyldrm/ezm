@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { getBaseUrl } from '@/lib/site';
 import { categoryService, supabase } from '@/lib/supabase';
 
-export const revalidate = 300; // 24 saat cache
+export const revalidate = 86400; // 24 saat önbellek (86400 saniye)
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getBaseUrl();

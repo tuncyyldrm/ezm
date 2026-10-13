@@ -296,7 +296,6 @@ export default function CategoriesPage() {
                               alt={cat.name}
                               width={48}
                               height={48}
-                              unoptimized
                               className="w-full h-full object-cover"
                             />
                           ) : (

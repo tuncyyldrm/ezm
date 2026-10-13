@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import ProductImage from '@/components/ProductImage';
 
 type ProductCode = {
@@ -124,11 +125,13 @@ function SocketChip({ code }: { code: string }) {
 
       {show && (
         <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-36 bg-white p-2 rounded-xl shadow-xl border border-gray-100">
-          <div className="w-full h-26 bg-white-50 rounded-lg flex items-center justify-center overflow-hidden">
-            <img
+          <div className="relative w-full h-24 bg-white-50 rounded-lg flex items-center justify-center overflow-hidden">
+            <Image
               src={`${STORAGE}/${code}.jpg`}
               alt={`${code} muadil soket parça önizlemesi`}
-              className="max-w-full max-h-full object-contain"
+              fill
+              sizes="144px"
+              className="object-contain p-1"
               onError={() => setImgError(true)}
             />
           </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import CategoryImage from '@/components/CategoryImage';
 import type { Metadata } from 'next';
 
-export const revalidate = 300;
+export const revalidate = 3600; // 1 saat önbellek
 
 export const metadata: Metadata = {
   title: 'EZM OTO - Yedek Parça Kataloğu',

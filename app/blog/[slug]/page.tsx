@@ -220,7 +220,6 @@ export default async function BlogDetailPage({
               alt={post.title}
               width={1200}
               height={560}
-              unoptimized
               className="w-full max-h-[560px] object-cover rounded-2xl shadow-sm"
             />
 

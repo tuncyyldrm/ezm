@@ -33,12 +33,15 @@ interface CategoryClientProps {
 }
 
 export default function CategoryClient({ categoryName, products }: CategoryClientProps) {
+  const PAGE_SIZE = 24;
   const [inputValue, setInputValue] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [displayLimit, setDisplayLimit] = useState(PAGE_SIZE);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(inputValue);
+      setDisplayLimit(PAGE_SIZE);
     }, 250);
 
     return () => clearTimeout(timer);
@@ -135,9 +138,17 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
 
   const isEmpty = filteredProducts.length === 0;
 
+  const displayedProducts = filteredProducts.slice(0, displayLimit);
+  const hasMore = displayLimit < filteredProducts.length;
+
   const handleClear = () => {
     setInputValue('');
     setDebouncedSearch('');
+    setDisplayLimit(PAGE_SIZE);
+  };
+
+  const handleLoadMore = () => {
+    setDisplayLimit(prev => prev + PAGE_SIZE);
   };
 
   return (
@@ -178,15 +189,29 @@ export default function CategoryClient({ categoryName, products }: CategoryClien
           )}
         </div>
         <div className={`text-xs font-bold px-3 py-1.5 rounded-full border ${!isEmpty ? 'text-blue-700 bg-blue-50 border-blue-100' : 'text-red-700 bg-red-50 border-red-100'}`}>
-          {filteredProducts.length} Ürün
+          {filteredProducts.length} Ürün {hasMore && `(${displayedProducts.length} gösteriliyor)`}
         </div>
       </div>
 
       <div className="flex-1">
         {!isEmpty ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map(p => <ProductCard key={p.id} product={p} />)}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {displayedProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+
+            {hasMore && (
+              <div className="text-center pt-8 pb-4">
+                <button
+                  type="button"
+                  onClick={handleLoadMore}
+                  className="px-8 py-3.5 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-2xl hover:bg-blue-50 transition-all shadow-sm hover:shadow"
+                >
+                  Daha Fazla Ürün Göster ({filteredProducts.length - displayedProducts.length} ürün daha)
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex items-center justify-center min-h-[400px] h-full">
             <div className="text-center py-20 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-8 max-w-md w-full">

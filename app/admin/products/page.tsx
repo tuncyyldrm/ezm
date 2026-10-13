@@ -284,7 +284,7 @@ export default function ProductsPage() {
                       <td className="px-3 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-slate-100 border border-slate-200 rounded-xl overflow-hidden flex-shrink-0">
-                            <Image src={`${BUCKET}/${p.sku}.jpg`} className="w-full h-full object-cover" alt={p.title} width={48} height={48} unoptimized onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                            <Image src={`${BUCKET}/${p.sku}.jpg`} className="w-full h-full object-cover" alt={p.title} width={48} height={48} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                           </div>
                           <div>
                             <div className="font-bold text-sm text-slate-800 group-hover:text-indigo-700 truncate max-w-[250px]">{p.title}</div>

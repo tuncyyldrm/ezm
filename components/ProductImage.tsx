@@ -1,46 +1,55 @@
 'use client';
 
 import { useState, useEffect, startTransition } from 'react';
+import Image from 'next/image';
 
 interface ProductImageProps {
   sku: string;
   title: string;
   storageUrl: string;
+  sizes?: string;
+  priority?: boolean;
 }
 
-export default function ProductImage({ sku, title, storageUrl }: ProductImageProps) {
-  // Cache-breaking ortadan kaldırıldı. Doğrudan temiz statik URL ile başlatıyoruz.
+const FALLBACK_IMAGE = '/no-image.svg';
+
+export default function ProductImage({
+  sku,
+  title,
+  storageUrl,
+  sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px',
+  priority = false,
+}: ProductImageProps) {
   const [imgSrc, setImgSrc] = useState(`${storageUrl}/${sku}.jpg`);
-  const [retryCount, setRetryCount] = useState(0);
+  const [isFallback, setIsFallback] = useState(false);
 
   useEffect(() => {
     startTransition(() => {
-      setRetryCount(0);
+      setIsFallback(false);
       setImgSrc(`${storageUrl}/${sku}.jpg`);
     });
   }, [sku, storageUrl]);
 
   const handleError = () => {
-    if (imgSrc === '/no-image.webp') return;
-
-    if (retryCount === 0) {
-      // .png bulunamadıysa .jpg sürümünü kontrol et (Parametresiz, temiz URL)
-      setImgSrc(`${storageUrl}/${sku}.jpg`);
-    } else if (retryCount === 1) {
-      // O da yoksa global fallback resmine geç
-      setImgSrc('/no-image.webp');
+    if (!isFallback) {
+      setIsFallback(true);
+      setImgSrc(FALLBACK_IMAGE);
     }
-    setRetryCount(c => c + 1);
   };
 
   return (
-    <img
-      key={imgSrc}
-      src={imgSrc}
-      alt={`${title} - Oto Yedek Parça Görseli`} // Google Görseller indekslemesi için semantik eklenti
-      loading="lazy"
-      className="max-w-full max-h-full object-contain"
-      onError={handleError}
-    />
+    <div className="relative w-full h-full flex items-center justify-center">
+      <Image
+        key={imgSrc}
+        src={imgSrc}
+        alt={`${title} - Oto Yedek Parça Görseli`}
+        fill
+        sizes={sizes}
+        className="object-contain p-1"
+        onError={handleError}
+        loading={priority ? 'eager' : 'lazy'}
+        priority={priority}
+      />
+    </div>
   );
 }

@@ -66,7 +66,7 @@ const storage = {
   upload: async (file: File, path: string) => {
     const { error } = await supabase.storage
       .from('product-images' as Bucket)
-      .upload(path, file, { cacheControl: '3600', upsert: true });
+      .upload(path, file, { cacheControl: '31536000', upsert: true });
     if (error) throw error;
     return `${supabaseUrl}/storage/v1/object/public/product-images/${path}`;
   },

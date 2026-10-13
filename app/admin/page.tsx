@@ -1,77 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Suspense } from "react";
+import MissingImageStatClient from "@/components/MissingImageStatClient";
 
 export const dynamic = "force-dynamic";
-
-const PAGE_SIZE = 1000;
-
-async function countActiveProductsWithoutStorageImage() {
-  const activeSkus = new Set<string>();
-
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from("products")
-      .select("sku")
-      .eq("is_active", true)
-      .range(offset, offset + PAGE_SIZE - 1);
-
-    if (error) throw error;
-    for (const product of data ?? []) {
-      if (product.sku) activeSkus.add(product.sku.trim().toLocaleLowerCase("en-US"));
-    }
-    if (!data || data.length < PAGE_SIZE) break;
-  }
-
-  const storedImageNames = new Set<string>();
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase.storage
-      .from("product-images")
-      .list("", { limit: PAGE_SIZE, offset, sortBy: { column: "name", order: "asc" } });
-
-    if (error) throw error;
-    for (const file of data ?? []) {
-      if (file.id && file.name) storedImageNames.add(file.name.toLocaleLowerCase("en-US"));
-    }
-    if (!data || data.length < PAGE_SIZE) break;
-  }
-
-  return [...activeSkus].filter((sku) => !storedImageNames.has(`${sku}.jpg`)).length;
-}
-
-async function MissingImageStat() {
-  let count: number | null = null;
-  let errorMessage: string | null = null;
-
-  try {
-    count = await countActiveProductsWithoutStorageImage();
-  } catch (error) {
-    console.error("Supabase Storage ürün görselleri kontrol edilemedi:", error);
-    errorMessage = "Storage dosya listeleme iznini kontrol edin.";
-  }
-
-  const label = errorMessage
-    ? "Görsel Kontrolü Yapılamadı"
-    : "Stok Koduna Göre Görseli Eksik Aktif Ürün";
-  const color = errorMessage
-    ? "text-amber-600 bg-amber-50"
-    : count
-      ? "text-blue-600 bg-blue-50"
-      : "text-slate-400 bg-slate-50";
-
-  return (
-    <div className={`p-4 rounded-2xl border border-slate-100 ${color}`}>
-      <div className="text-2xl mb-2">🖼️</div>
-      <div className="text-2xl font-black text-slate-900">
-        {count?.toLocaleString("tr-TR") ?? "—"}
-      </div>
-      <p className="text-xs font-bold uppercase tracking-wider mt-1">{label}</p>
-      {errorMessage && (
-        <p role="status" className="mt-2 text-xs font-medium">{errorMessage}</p>
-      )}
-    </div>
-  );
-}
 
 export default async function AdminDashboard() {
   const [products, categories, codes, uncategorized] = await Promise.all([
@@ -142,22 +73,7 @@ export default async function AdminDashboard() {
               <p className="text-xs font-bold uppercase tracking-wider mt-1">{stat.label}</p>
             </div>
           ))}
-          <Suspense
-            fallback={
-              <div
-                role="status"
-                className="p-4 rounded-2xl border border-slate-100 text-slate-400 bg-slate-50"
-              >
-                <div className="text-2xl mb-2">🖼️</div>
-                <div className="text-2xl font-black text-slate-900">—</div>
-                <p className="text-xs font-bold uppercase tracking-wider mt-1">
-                  Görsel kontrolü yapılıyor
-                </p>
-              </div>
-            }
-          >
-            <MissingImageStat />
-          </Suspense>
+          <MissingImageStatClient />
         </div>
       </div>
 

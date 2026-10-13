@@ -5,8 +5,8 @@ import CategoryClient from '@/components/CategoryClient';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 
-// 6 saat boyunca sunucu/CDN seviyesinde tam statik cache
-export const revalidate = 300; 
+// 6 saat boyunca sunucu/CDN seviyesinde tam statik cache (21600 saniye)
+export const revalidate = 21600; 
 
 interface CategoryPageProps {
   params: Promise<{ categorySlug: string }>;

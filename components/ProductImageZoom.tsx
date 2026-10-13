@@ -18,12 +18,6 @@ export default function ProductImageZoom({ sku, title, storageUrl, imageExtensio
     setShowModal(false);
   }, []);
 
-  // Performans & Hız: Modal açılma ihtimaline karşı resmi arka planda önceden yükle (Preload)
-  const handleMouseEnter = () => {
-    const img = new Image();
-    img.src = imgSrc;
-  };
-
   useEffect(() => {
     if (!showModal) return;
 
@@ -31,7 +25,6 @@ export default function ProductImageZoom({ sku, title, storageUrl, imageExtensio
       if (e.key === 'Escape') closeModal();
     };
 
-    // Scrollbar kaybolduğunda sayfanın sağa/sola sıçramasını engeller
     const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
     document.body.style.overflow = 'hidden';
     if (scrollbarWidth > 0) {
@@ -49,17 +42,15 @@ export default function ProductImageZoom({ sku, title, storageUrl, imageExtensio
 
   return (
     <>
-      {/* UX Düzeltmesi: Klavye ile odaklanabilir (Tab) ve Enter ile açılabilir hale getirildi */}
       <div 
         onClick={() => setShowModal(true)} 
-        onMouseEnter={handleMouseEnter}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setShowModal(true); } }}
-        className="cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+        className="cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded relative w-full h-72 sm:h-80 flex items-center justify-center"
         role="button"
         tabIndex={0}
         aria-label={`${title} görselini büyüt`}
       >
-        <ProductImage sku={sku} title={title} storageUrl={storageUrl} />
+        <ProductImage sku={sku} title={title} storageUrl={storageUrl} sizes="(max-width: 768px) 100vw, 450px" priority={true} />
       </div>
 
       {showModal && (
@@ -92,7 +83,7 @@ export default function ProductImageZoom({ sku, title, storageUrl, imageExtensio
             onClick={(e) => e.stopPropagation()}
             loading="eager"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/no-image.webp';
+              (e.target as HTMLImageElement).src = '/no-image.svg';
             }}
           />
 
