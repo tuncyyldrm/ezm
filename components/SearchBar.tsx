@@ -257,8 +257,8 @@ export default function SearchBar() {
                 index === selectedIndex ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50 border-l-4 border-l-transparent'
               }`}
             >
-              <div className="w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center border border-gray-100">
-                <ProductImage sku={product.sku} title={product.title} storageUrl={storageUrl} />
+              <div className="relative w-12 h-12 shrink-0 rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center border border-gray-100">
+                <ProductImage sku={product.sku} title={product.title} storageUrl={storageUrl} sizes="48px" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

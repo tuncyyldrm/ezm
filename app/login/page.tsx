@@ -33,7 +33,8 @@ export default function LoginPage() {
 
       // 2. Performans İyileştirmesi: Tekrar getUser() çağırmak yerine gelen veriyi kullanıyoruz
       const user = authData?.user;
-      if (user?.user_metadata?.role !== 'admin') {
+      const role = user?.app_metadata?.role || user?.user_metadata?.role;
+      if (role !== 'admin') {
         await supabase.auth.signOut();
         throw new Error('Bu panele erişim yetkiniz bulunmamaktadır.');
       }

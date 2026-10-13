@@ -56,7 +56,7 @@ export async function proxy(request: NextRequest) {
       );
     }
 
-    const userRole = user.app_metadata?.role;
+    const userRole = user.app_metadata?.role || user.user_metadata?.role;
 
     if (userRole !== 'admin') {
       if (pathname.startsWith('/api/')) {
