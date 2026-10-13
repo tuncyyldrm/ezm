@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -13,7 +14,7 @@ type Props = {
   }>;
 };
 
-async function getPost(slug: string) {
+const getPost = cache(async (slug: string) => {
   const { data, error } = await supabase
     .from("blog_posts")
     .select("*")
@@ -26,7 +27,7 @@ async function getPost(slug: string) {
   }
 
   return data;
-}
+});
 
 function removeSiteName(title: string): string {
   return title.replace(/(?:\s*[|–—-]\s*EZM OTO)+\s*$/i, "").trim();

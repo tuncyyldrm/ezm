@@ -6,6 +6,7 @@ import { useState, useEffect, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { normalizeSearchText } from "@/lib/search";
+import { compressImage } from "@/lib/image-compress";
 
 export const dynamic = 'force-dynamic';
 
@@ -119,10 +120,11 @@ function ProductFormContent() {
       }
 
       if (imageFile) {
+        const optimizedFile = await compressImage(imageFile);
         const { error } = await supabase.storage.from("product-images").upload(
-          `${formData.sku.trim()}.jpg`,
-          imageFile,
-          { upsert: true }
+          `${formData.sku.trim().toUpperCase()}.jpg`,
+          optimizedFile,
+          { cacheControl: '31536000', upsert: true }
         );
         if (error) throw new Error(`Ürün görseli yüklenemedi: ${error.message}`);
       }

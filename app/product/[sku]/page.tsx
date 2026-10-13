@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getBaseUrl } from '@/lib/site';
 import { notFound } from 'next/navigation';
@@ -65,18 +66,28 @@ const uniqueVehicles = (vehicles: ProductVehicle[] | null | undefined) =>
 const whatsappMsg = (sku: string, title: string, pin: number, url: string) =>
   `Merhaba,\n${sku} - ${title} hakkında bilgi almak istiyorum.${pin > 0 ? ` (${pin} PIN)` : ''}\n\n${url}`;
 
+const getProductBySku = cache(async (decodedSku: string) => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, sku, title, pin_count, is_new, category_id, categories(id, name, slug), product_codes(code_value, code_type), product_vehicles(brands(name))')
+    .eq('sku', decodedSku)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Ürün verisi çekme hatası:', error);
+    return null;
+  }
+  return data;
+});
+
 // 🚀 WHATSAPP BOTUNA RESMİ EKSİKSİZ GÖSTEREN KISIM
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { sku } = await params;
   const decoded = decodeURIComponent(sku);
   const url = `${SITE_URL}/product/${encodeURIComponent(sku)}`;
 
-  const { data: p } = await supabase
-    .from('products')
-    .select('sku, title, pin_count, product_codes(code_value, code_type), categories(name)')
-    .eq('sku', decoded)
-    .eq('is_active', true)
-    .maybeSingle();
+  const p = await getProductBySku(decoded);
 
   if (!p) return { title: 'Ürün Bulunamadı', robots: { index: false } };
 
@@ -113,14 +124,9 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const decoded = decodeURIComponent(sku);
   const url = `${SITE_URL}/product/${encodeURIComponent(sku)}`;
 
-  const { data: product, error } = await supabase
-    .from('products')
-    .select('id, sku, title, pin_count, is_new, category_id, categories(id, name, slug), product_codes(code_value, code_type), product_vehicles(brands(name))')
-    .eq('sku', decoded)
-    .eq('is_active', true)
-    .maybeSingle();
+  const product = await getProductBySku(decoded);
 
-  if (error || !product) { console.error(error); notFound(); }
+  if (!product) { notFound(); }
 
   const p = product as ProductRecord & { categories?: ProductCategory | ProductCategory[] | null; product_codes?: ProductCode[] | null; product_vehicles?: ProductVehicle[] | null; sku: string; title: string; pin_count?: number | null; is_new?: boolean | null; };
   const categoryInfo = toCategory(p.categories);

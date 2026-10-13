@@ -1,4 +1,4 @@
-// proxy.ts
+// proxy.ts (Next.js 16 Proxy / Middleware)
 
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,6 +11,9 @@ export async function proxy(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('Supabase environment variables missing');
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Yapılandırma hatası.' }, { status: 500 });
+    }
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -42,9 +45,12 @@ export async function proxy(request: NextRequest) {
     console.error('Auth Error:', error.message);
   }
 
-  // ADMIN SAYFALARI
-  if (pathname.startsWith('/admin')) {
+  // ADMIN SAYFALARI VE ADMIN API'LERİ KORUMASI
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
     if (!user) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Oturum açmanız gerekiyor.' }, { status: 401 });
+      }
       return NextResponse.redirect(
         new URL('/login', request.url)
       );
@@ -53,6 +59,9 @@ export async function proxy(request: NextRequest) {
     const userRole = user.app_metadata?.role;
 
     if (userRole !== 'admin') {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Bu işlem için admin yetkisi gerekir.' }, { status: 403 });
+      }
       return NextResponse.redirect(
         new URL('/login?error=yetkisiz', request.url)
       );
@@ -79,6 +88,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     '/admin/:path*',
+    '/api/admin/:path*',
     '/login',
   ],
 };

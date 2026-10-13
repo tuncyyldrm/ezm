@@ -4,6 +4,7 @@
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/image-compress";
 
 const BUCKET_URL = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
 
@@ -86,9 +87,10 @@ export default function CategoriesPage() {
     // Yeni görsel seçildiyse mevcut sistemle aynı şekilde yükle
     if (imageFile) {
       try {
+        const optimizedFile = await compressImage(imageFile);
         const { error: uploadError } = await supabase.storage
           .from("product-images")
-          .upload(`${slug}.jpg`, imageFile, { upsert: true });
+          .upload(`${slug}.jpg`, optimizedFile, { cacheControl: '31536000', upsert: true });
 
         if (uploadError) throw uploadError;
       } catch (error) {

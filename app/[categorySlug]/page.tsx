@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getBaseUrl } from '@/lib/site';
 import { notFound } from 'next/navigation';
@@ -82,16 +83,26 @@ export async function generateStaticParams() {
   }));
 }
 
+const getCategoryBySlug = cache(async (slug: string) => {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, parent_id')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Kategori hatası:', error);
+    return null;
+  }
+  return data;
+});
+
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const { categorySlug: slug } = await params;
   const currentUrl = `${SITE_URL}/${slug}`;
   
-  const { data: category } = await supabase
-    .from('categories')
-    .select('name')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .maybeSingle();
+  const category = await getCategoryBySlug(slug);
 
   if (!category) return { title: 'Kategori Bulunamadı' };
 
@@ -119,15 +130,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const baseUrl = getBaseUrl();
   const currentUrl = `${baseUrl}/${slug}`;
 
-  const { data: category, error: categoryError } = await supabase
-    .from('categories')
-    .select('id, name, parent_id')
-    .eq('slug', slug)
-    .eq('is_active', true)
-    .maybeSingle();
+  const category = await getCategoryBySlug(slug);
 
-  if (categoryError || !category) {
-    if (categoryError) console.error('Kategori hatası:', categoryError);
+  if (!category) {
     notFound();
   }
 
