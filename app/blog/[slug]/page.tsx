@@ -14,6 +14,8 @@ type Props = {
   }>;
 };
 
+export const revalidate = 60; // 1 dakika otomatik tazeleme
+
 const getPost = cache(async (slug: string) => {
   const { data, error } = await supabase
     .from("blog_posts")

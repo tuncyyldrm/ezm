@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 // Güncellediğimiz ortak supabase istemcisini import ediyoruz
 import { supabase } from "@/lib/supabase"; 
+import AdminRevalidateButton from "@/components/AdminRevalidateButton"; 
 
 const menuItems = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
@@ -42,16 +43,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <Link href="/admin" className="font-bold tracking-wide">
           EZM OTO <span className="font-medium text-slate-400">Admin</span>
         </Link>
-        <button
-          type="button"
-          aria-label={isOpen ? "Menüyü kapat" : "Menüyü aç"}
-          aria-expanded={isOpen}
-          aria-controls="admin-navigation"
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-xl transition hover:bg-slate-800"
-        >
-          {isOpen ? "✕" : "☰"}
-        </button>
+        <div className="flex items-center gap-2">
+          <AdminRevalidateButton variant="header" label="Yayını Güncelle" />
+          <button
+            type="button"
+            aria-label={isOpen ? "Menüyü kapat" : "Menüyü aç"}
+            aria-expanded={isOpen}
+            aria-controls="admin-navigation"
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-xl transition hover:bg-slate-800"
+          >
+            {isOpen ? "✕" : "☰"}
+          </button>
+        </div>
       </div>
 
       <aside
@@ -82,7 +86,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        <div className="mt-6 space-y-1 border-t border-slate-800 pt-4">
+        <div className="mt-6 space-y-2 border-t border-slate-800 pt-4">
+          <AdminRevalidateButton variant="sidebar" label="Yayını Güncelle" />
           <button
             type="button"
             onClick={handleLogout}

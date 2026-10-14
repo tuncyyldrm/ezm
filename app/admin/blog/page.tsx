@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { triggerRevalidate } from "@/lib/revalidate-client";
 
 const BUCKET_URL =
   "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/blog-images";
@@ -384,10 +385,14 @@ export default function BlogAdminPage() {
         throw new Error(error.message);
       }
 
+      // Canlı site önbelleğini anında tazele (ISR Purge)
+      void triggerRevalidate("blog");
+      if (slug) void triggerRevalidate(`/blog/${slug}`);
+
       alert(
         editId
-          ? "Blog yazısı güncellendi."
-          : "Blog yazısı oluşturuldu."
+          ? "Blog yazısı güncellendi ve yayına alındı."
+          : "Blog yazısı oluşturuldu ve yayına alındı."
       );
 
       resetForm();
@@ -431,6 +436,10 @@ export default function BlogAdminPage() {
         .from("blog-images")
         .remove([post.cover_image]);
     }
+
+    // Canlı siteden silinen yazıyı ve blog listesini tazele
+    void triggerRevalidate("blog");
+    if (post.slug) void triggerRevalidate(`/blog/${post.slug}`);
 
     await loadPosts();
 

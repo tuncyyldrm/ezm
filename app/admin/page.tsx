@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import MissingImageStatClient from "@/components/MissingImageStatClient";
+import AdminRevalidateButton from "@/components/AdminRevalidateButton";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +79,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Hızlı Aksiyon Kısayolları */}
-      <div>
+      <div className="mb-6">
         <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Hızlı İşlemler</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Link href="/admin/products/new" className="flex items-center justify-between p-4 bg-indigo-600 text-white font-bold text-sm rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100">
@@ -90,6 +91,12 @@ export default async function AdminDashboard() {
             <span>➔</span>
           </Link>
         </div>
+      </div>
+
+      {/* Canlı Yayın ve Önbellek Yönetimi */}
+      <div>
+        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 px-1">Canlı Yayın & Önbellek Yönetimi</h2>
+        <AdminRevalidateButton variant="card" />
       </div>
 
     </div>

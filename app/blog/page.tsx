@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 const BUCKET_URL =
   "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/blog-images";
 
+export const revalidate = 60; // 1 dakika otomatik tazeleme (veya admin tetiklemesiyle anlık)
+
 export const metadata = {
   title: "Blog",
   description:

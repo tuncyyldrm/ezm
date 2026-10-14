@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/image-compress";
+import { triggerRevalidate } from "@/lib/revalidate-client";
 
 const BUCKET_URL = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
 
@@ -141,6 +142,9 @@ export default function CategoriesPage() {
     if (error) {
       alert("Hata: " + error.message);
     } else {
+      void triggerRevalidate("/");
+      void triggerRevalidate(`/${slug}`);
+      void triggerRevalidate("/sitemap.xml");
       handleCancel();
       load();
     }
@@ -198,6 +202,10 @@ export default function CategoriesPage() {
       .from("categories")
       .delete()
       .eq("id", cat.id);
+
+    void triggerRevalidate("/");
+    void triggerRevalidate(`/${cat.slug}`);
+    void triggerRevalidate("/sitemap.xml");
 
     load();
   };

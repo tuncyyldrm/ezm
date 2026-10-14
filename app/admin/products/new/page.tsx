@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { normalizeSearchText } from "@/lib/search";
 import { compressImage } from "@/lib/image-compress";
+import { triggerRevalidate } from "@/lib/revalidate-client";
 
 export const dynamic = 'force-dynamic';
 
@@ -187,6 +188,12 @@ function ProductFormContent() {
         const { error } = await supabase.from("product_vehicles").insert(brandIds.map(bId => ({ product_id: productId, brand_id: bId })));
         if (error) throw new Error(`Ürün marka ilişkileri kaydedilemedi: ${error.message}`);
       }
+
+      // Canlı site önbelleğini anında tazele
+      const sku = formData.sku.trim().toUpperCase();
+      void triggerRevalidate(`/product/${sku}`);
+      void triggerRevalidate("/");
+      void triggerRevalidate("/sitemap.xml");
 
       router.push("/admin/products");
       router.refresh();

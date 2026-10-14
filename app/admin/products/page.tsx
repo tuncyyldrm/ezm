@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState, useEffect, useCallback, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { triggerRevalidate } from "@/lib/revalidate-client";
 
 const BUCKET = "https://erntysmhwfxkrtegirds.supabase.co/storage/v1/object/public/product-images";
 const SIZE = 20;
@@ -133,6 +134,10 @@ export default function ProductsPage() {
         console.error("Ürün silindi ancak görsel silinemedi:", imageError);
         alert("Ürün silindi ancak görsel dosyası silinemedi.");
       }
+
+      void triggerRevalidate(`/product/${product.sku}`);
+      void triggerRevalidate("/");
+      void triggerRevalidate("/sitemap.xml");
 
       await fetchProducts(0, true);
     } catch (error) {
