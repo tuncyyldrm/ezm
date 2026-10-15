@@ -14,6 +14,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 1.0,
     },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/hakkimizda`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/iletisim`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/cerez-politikasi`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
   ];
 
   try {
@@ -26,6 +50,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),
         changeFrequency: 'weekly',
         priority: 0.8,
+      }));
+
+    // 2. Blog Yazılarını Çek
+    const { data: blogPosts } = await supabase
+      .from('blog_posts')
+      .select('slug, updated_at, published_at')
+      .eq('is_published', true);
+
+    const blogRoutes: MetadataRoute.Sitemap = (blogPosts || [])
+      .filter((post) => post.slug)
+      .map((post) => ({
+        url: `${baseUrl}/blog/${post.slug}`,
+        lastModified: post.updated_at ? new Date(post.updated_at) : (post.published_at ? new Date(post.published_at) : new Date()),
+        changeFrequency: 'weekly',
+        priority: 0.7,
       }));
 
     // 2. TÜM Ürünleri Sayfalayarak Çek (Supabase 1000 limitini aşmak için)
@@ -74,7 +113,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.6,
       }));
 
-    return [...staticRoutes, ...categoryRoutes, ...productRoutes];
+    return [...staticRoutes, ...categoryRoutes, ...blogRoutes, ...productRoutes];
 
   } catch (error) {
     console.error('Sitemap üretilirken hata oluştu:', error);

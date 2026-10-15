@@ -47,6 +47,9 @@ export const metadata: Metadata = {
   publisher: "EZM OTO",
 
   metadataBase: new URL(getBaseUrl()),
+  alternates: {
+    canonical: "./",
+  },
 
   openGraph: {
     type: "website",

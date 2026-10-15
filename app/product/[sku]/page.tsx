@@ -70,7 +70,7 @@ const getProductBySku = cache(async (decodedSku: string) => {
   const { data, error } = await supabase
     .from('products')
     .select('id, sku, title, pin_count, is_new, category_id, categories(id, name, slug), product_codes(code_value, code_type), product_vehicles(brands(name))')
-    .eq('sku', decodedSku)
+    .ilike('sku', decodedSku)
     .eq('is_active', true)
     .maybeSingle();
 
@@ -85,12 +85,12 @@ const getProductBySku = cache(async (decodedSku: string) => {
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { sku } = await params;
   const decoded = decodeURIComponent(sku);
-  const url = `${SITE_URL}/product/${encodeURIComponent(sku)}`;
 
   const p = await getProductBySku(decoded);
 
   if (!p) return { title: 'Ürün Bulunamadı', robots: { index: false } };
 
+  const canonicalUrl = `${SITE_URL}/product/${encodeURIComponent(p.sku)}`;
   const categoryInfo = toCategory(p.categories);
   const oems = filterCodes(p.product_codes, 'OEM');
   const kategoriAdi = categoryInfo?.name || 'Oto Yedek Parça';
@@ -106,14 +106,14 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     openGraph: { 
       title, 
       description: desc, 
-      url, 
+      url: canonicalUrl, 
       siteName: 'EZM OTO', 
       locale: 'tr_TR', 
       type: 'article',
       images: [{ url: img, width: 800, height: 800, alt: title }] // Bot resmi buradan vurup alacak
     },
     twitter: { card: 'summary_large_image', title, description: desc, images: [img] },
-    alternates: { canonical: url },
+    alternates: { canonical: canonicalUrl },
     robots: { index: true, follow: true },
     keywords: `${p.sku}, ${p.title}, ${kategoriAdi}, ${oems.join(', ')}, oto yedek parça, soket, oem no`,
   };
@@ -129,13 +129,14 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   if (!product) { notFound(); }
 
   const p = product as ProductRecord & { categories?: ProductCategory | ProductCategory[] | null; product_codes?: ProductCode[] | null; product_vehicles?: ProductVehicle[] | null; sku: string; title: string; pin_count?: number | null; is_new?: boolean | null; };
+  const canonicalUrl = `${SITE_URL}/product/${encodeURIComponent(p.sku)}`;
   const categoryInfo = toCategory(p.categories);
   const oems = filterCodes(p.product_codes, 'OEM');
   const muadils = filterCodes(p.product_codes, 'MUADIL');
   const vehicles = uniqueVehicles(p.product_vehicles);
   const pinCount = Number(p.pin_count) || 0;
   const img = `${STORAGE_URL}/${p.sku}.${IMAGE_EXTENSION}`;
-  const whatsapp = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(whatsappMsg(p.sku, p.title, pinCount, url))}`;
+  const whatsapp = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(whatsappMsg(p.sku, p.title, pinCount, canonicalUrl))}`;
 
   const schema = {
     '@context': 'https://schema.org',
@@ -148,7 +149,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         description: `${p.title} - EZM OTO Güvencesiyle Kaliteli Oto Yedek Parça çözümleri.`,
         category: categoryInfo?.name,
         brand: { '@type': 'Brand', name: 'EZM OTO' },
-        offers: { '@type': 'Offer', price: '0', priceCurrency: 'TRY', availability: 'https://schema.org/InStock', url: url, seller: { '@type': 'Organization', name: 'EZM OTO' } }
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'TRY', availability: 'https://schema.org/InStock', url: canonicalUrl, seller: { '@type': 'Organization', name: 'EZM OTO' } }
       }
     ]
   };
@@ -165,7 +166,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           {categoryInfo ? (
             <Link href={`/${categoryInfo.slug}`} className="hover:text-blue-600">{categoryInfo.name}</Link>
           ) : (
-            <Link href="/urunler" className="hover:text-blue-600">Ürünler</Link>
+            <Link href="/" className="hover:text-blue-600">Katalog</Link>
           )}
           <span className="mx-2">/</span>
           <span className="text-gray-900 font-semibold" aria-current="page">{p.sku}</span>

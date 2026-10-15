@@ -11,6 +11,9 @@ export const metadata = {
   title: "Blog",
   description:
     "Otomotiv yedek parçaları, araç bakımı, arıza belirtileri ve otomotiv dünyasından güncel bilgiler.",
+  alternates: {
+    canonical: "/blog",
+  },
 };
 
 export default async function BlogPage() {
