@@ -14,7 +14,20 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  /* Diğer ayarlarınız */
+  async redirects() {
+    return [
+      {
+        source: "/urunler",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/urun/:path*",
+        destination: "/product/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
